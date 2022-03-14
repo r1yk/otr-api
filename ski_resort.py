@@ -1,5 +1,4 @@
 from typing import List, Optional
-import json
 from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
@@ -53,9 +52,29 @@ class Resort():
     def snow_report_url(self) -> str:
         return self._snow_report_url
 
-    def get_lifts(self, peak: Optional[WebElement] = None) -> List[WebElement]:
-        """Get the HTML element containing all lift information."""
+    def get_lift_elements(self, peak: Optional[WebElement] = None) -> List[WebElement]:
+        """Get the HTML elements containing all lift information."""
         return self.browser.find_elements(by=By.CSS_SELECTOR, value=self.lifts_css_selector)
+
+    def get_lift_name(self, lift: WebElement) -> str:
+        """Find the name of this lift within the HTML element."""
+
+    def get_lift_status(self, lift: WebElement) -> str:
+        """Find the status of this lift within the HTML element."""
+
+    def get_lifts(self) -> List['Lift']:
+        return [
+            Lift(
+                resort=self,
+                name=self.get_lift_name(lift_element),
+                status=self.get_lift_status(lift_element)
+            ) for lift_element in self.get_lift_elements()
+        ]
+
+    def get_trail_elements(self, trail_section: Optional[WebElement] = None) -> List[WebElement]:
+        search_within = trail_section if trail_section else self.browser
+        return search_within.find_elements(
+            by=By.CSS_SELECTOR, value=self.trails_css_selector)
 
     def get_trails(self, trail_section: Optional[WebElement] = None) -> List['Trail']:
         """
@@ -70,10 +89,6 @@ class Resort():
                 trails.extend(self.get_trails(trail_section))
             return trails
 
-        search_within = trail_section if trail_section else self.browser
-        trail_elements = search_within.find_elements(
-            by=By.CSS_SELECTOR, value=self.trails_css_selector)
-
         return [
             Trail(
                 resort=self,
@@ -83,7 +98,7 @@ class Resort():
                 status=self.get_trail_status(element),
                 groomed=self.get_trail_groomed(element),
                 night_skiing=self.get_trail_night_skiing(element)
-            ) for element in trail_elements
+            ) for element in self.get_trail_elements(trail_section=trail_section)
         ]
 
     def get_trail_sections(self) -> List[WebElement]:
@@ -121,6 +136,35 @@ class Resort():
             } for trail in trails
         ]
         return summary
+
+    def get_lifts_summary(self) -> List[dict]:
+        return [
+            {
+                'name': lift.name,
+                'status': lift.status
+            } for lift in self.get_lifts()
+        ]
+
+
+class Lift(Settable):
+    _resort: Resort
+    _name: str
+    _status: str
+
+    @property
+    def resort(self) -> Resort:
+        """An instance of the Resort that this lift belongs to"""
+        return self._resort
+
+    @property
+    def name(self) -> str:
+        """The name of the lift as it appears in reports/maps."""
+        return self._name
+
+    @property
+    def status(self) -> str:
+        """The last-reported status of the lift (i.e. open, closed, on hold)"""
+        return self._status
 
 
 class Trail(Settable):
@@ -168,6 +212,20 @@ class SnowReport(Resort):
     _trail_sections_css_selector = '.SnowReport-section.SnowReport-section--trails'
     _trail_section_name_css_selector = 'h2.SnowReport-section-title'
     _trails_grouped_by_section = True
+
+    def get_lift_name(self, lift: WebElement) -> str:
+        lift_name_element = lift.find_element(
+            by=By.CLASS_NAME, value='SnowReport-feature-title'
+        )
+        return lift_name_element.text
+
+    def get_lift_status(self, lift: WebElement) -> List[dict]:
+        lift_status_element: WebElement = lift.find_element(
+            by=By.CLASS_NAME, value='SnowReport-item-status'
+        )
+        return lift_status_element.find_element(
+            by=By.CLASS_NAME, value='SnowReport-sr-label'
+        ).text
 
     def get_trail_name(self, trail: WebElement) -> str:
         trail_name_element = trail.find_element(
