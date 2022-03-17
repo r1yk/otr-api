@@ -1,7 +1,7 @@
 from typing import List, Optional
-from selenium import webdriver
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.webdriver import WebDriver
 
 
 class Settable():
@@ -19,14 +19,10 @@ class Resort():
     _trails_grouped_by_section: bool
     _snow_report_url: str
 
-    def __init__(self):
+    def __init__(self, browser: WebDriver):
         """Fire up the browser, and fetch the snow report."""
-        self.browser = webdriver.Chrome()
+        self.browser = browser
         self.browser.get(self._snow_report_url)
-
-    def __del__(self):
-        """Close the browser."""
-        self.browser.close()
 
     @property
     def lifts_css_selector(self) -> str:
@@ -54,7 +50,7 @@ class Resort():
 
     def get_lift_elements(self, peak: Optional[WebElement] = None) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        return self.browser.find_elements(by=By.CSS_SELECTOR, value=self.lifts_css_selector)
+        return self.browser.find_elements(By.CSS_SELECTOR, self.lifts_css_selector)
 
     def get_lift_name(self, lift: WebElement) -> str:
         """Find the name of this lift within the HTML element."""
@@ -74,7 +70,7 @@ class Resort():
     def get_trail_elements(self, trail_section: Optional[WebElement] = None) -> List[WebElement]:
         search_within = trail_section if trail_section else self.browser
         return search_within.find_elements(
-            by=By.CSS_SELECTOR, value=self.trails_css_selector)
+            By.CSS_SELECTOR, self.trails_css_selector)
 
     def get_trails(self, trail_section: Optional[WebElement] = None) -> List['Trail']:
         """
@@ -103,11 +99,11 @@ class Resort():
 
     def get_trail_sections(self) -> List[WebElement]:
         """Get the HTML container for all trail information."""
-        return self.browser.find_elements(by=By.CSS_SELECTOR, value=self.trail_sections_css_selector)
+        return self.browser.find_elements(By.CSS_SELECTOR, self.trail_sections_css_selector)
 
     def get_trail_section_name(self, trail_section: WebElement) -> str:
         """Return the difficulty or classification of a group of trails."""
-        return trail_section.find_element(by=By.CSS_SELECTOR, value=self.trail_section_name_css_selector).text
+        return trail_section.find_element(By.CSS_SELECTOR, self.trail_section_name_css_selector).text
 
     def get_trail_name(self, trail: WebElement) -> str:
         """Find the name of this trail within the HTML element."""
@@ -215,35 +211,35 @@ class SnowReport(Resort):
 
     def get_lift_name(self, lift: WebElement) -> str:
         lift_name_element = lift.find_element(
-            by=By.CLASS_NAME, value='SnowReport-feature-title'
+            By.CLASS_NAME, 'SnowReport-feature-title'
         )
         return lift_name_element.text
 
     def get_lift_status(self, lift: WebElement) -> List[dict]:
         lift_status_element: WebElement = lift.find_element(
-            by=By.CLASS_NAME, value='SnowReport-item-status'
+            By.CLASS_NAME, 'SnowReport-item-status'
         )
         return lift_status_element.find_element(
-            by=By.CLASS_NAME, value='SnowReport-sr-label'
+            By.CLASS_NAME, 'SnowReport-sr-label'
         ).text
 
     def get_trail_name(self, trail: WebElement) -> str:
         trail_name_element = trail.find_element(
-            by=By.CLASS_NAME, value='SnowReport-feature-title')
+            By.CLASS_NAME, 'SnowReport-feature-title')
         return trail_name_element.text
 
     def get_trail_status(self, trail: WebElement) -> str:
         trail_status_icon: WebElement = trail.find_element(
-            by=By.CLASS_NAME, value='SnowReport-item-status')
+            By.CLASS_NAME, 'SnowReport-item-status')
         trail_status: WebElement = trail_status_icon.find_element(
-            by=By.TAG_NAME, value='span')
+            By.TAG_NAME, 'span')
         return trail_status.text
 
     def get_trail_groomed(self, trail: WebElement) -> bool:
         try:
             # If this element is found, the trail is groomed.
             trail.find_element(
-                by=By.CLASS_NAME, value='pti-groomed')
+                By.CLASS_NAME, 'pti-groomed')
             return True
         except:
             return False
@@ -252,7 +248,7 @@ class SnowReport(Resort):
         try:
             # If this element is found, the trail is open for night skiing.
             trail.find_element(
-                by=By.CLASS_NAME, value='pti-moon-mining')
+                By.CLASS_NAME, 'pti-moon-mining')
             return True
         except:
             return False
