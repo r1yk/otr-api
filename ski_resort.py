@@ -1,56 +1,42 @@
 from typing import List, Optional
+
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.webdriver import WebDriver
 
+from sqlalchemy import Boolean, Column, String, ForeignKey
+from sqlalchemy.orm import declarative_base
+
+Base = declarative_base()
+
 
 class Settable():
-    def __init__(self, **properties):
+    def __init__(self, *args, **properties):
         if properties:
             for property in properties.keys():
                 setattr(self, f'_{property}', properties.get(property))
 
 
-class Resort():
-    _lifts_css_selector: str
-    _trails_css_selector: str
-    _trail_sections_css_selector: str
-    _trail_section_name_css_selector: str
-    _trails_grouped_by_section: bool
-    _snow_report_url: str
+class Parser(Settable):
+    lifts_container_css_selector: str
+    lift_css_selector: str
+    trails_container_css_selector: str
+    trail_css_selector: str
 
-    def __init__(self, browser: WebDriver):
-        """Fire up the browser, and fetch the snow report."""
+    def __init__(self, browser: WebDriver, **parser_kwargs):
         self.browser = browser
-        self.browser.get(self._snow_report_url)
+        super().__init__(parser_kwargs)
 
-    @property
-    def lifts_css_selector(self) -> str:
-        return self._lifts_css_selector
-
-    @property
-    def trails_css_selector(self) -> str:
-        return self._trails_css_selector
-
-    @property
-    def trail_sections_css_selector(self) -> str:
-        return self._trail_sections_css_selector
-
-    @property
-    def trail_section_name_css_selector(self) -> str:
-        return self._trail_section_name_css_selector
-
-    @property
-    def trails_grouped_by_section(self) -> bool:
-        return self._trails_grouped_by_section
-
-    @property
-    def snow_report_url(self) -> str:
-        return self._snow_report_url
-
-    def get_lift_elements(self, peak: Optional[WebElement] = None) -> List[WebElement]:
+    def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        return self.browser.find_elements(By.CSS_SELECTOR, self.lifts_css_selector)
+        lift_elements = []
+        lifts_containers = self.browser.find_elements(
+            By.CSS_SELECTOR, self.lifts_container_css_selector
+        )
+        for container in lifts_containers:
+            lift_elements.extend(container.find_elements(
+                By.CSS_SELECTOR, self.lift_css_selector))
+        return lift_elements
 
     def get_lift_name(self, lift: WebElement) -> str:
         """Find the name of this lift within the HTML element."""
@@ -58,52 +44,47 @@ class Resort():
     def get_lift_status(self, lift: WebElement) -> str:
         """Find the status of this lift within the HTML element."""
 
-    def get_lifts(self) -> List['Lift']:
-        return [
-            Lift(
-                resort=self,
-                name=self.get_lift_name(lift_element),
-                status=self.get_lift_status(lift_element)
-            ) for lift_element in self.get_lift_elements()
-        ]
+    def get_lifts(self, lift_name_to_id: Optional[dict] = None) -> List['Lift']:
+        lifts = []
+        for lift_element in self.get_lift_elements():
+            lift_name = self.get_lift_name(lift_element)
+            lifts.append(
+                Lift(
+                    id=lift_name_to_id.get(
+                        lift_name) if lift_name_to_id else None,
+                    name=lift_name,
+                    status=self.get_lift_status(lift_element)
+                )
+            )
+        return lifts
 
-    def get_trail_elements(self, trail_section: Optional[WebElement] = None) -> List[WebElement]:
-        search_within = trail_section if trail_section else self.browser
-        return search_within.find_elements(
-            By.CSS_SELECTOR, self.trails_css_selector)
+    def get_trail_elements(self) -> List[WebElement]:
+        trail_elements = []
+        trails_containers = self.browser.find_elements(
+            By.CSS_SELECTOR, self.trails_container_css_selector
+        )
+        for container in trails_containers:
+            trail_elements.extend(
+                container.find_elements(
+                    By.CSS_SELECTOR, self.trail_css_selector))
+        return trail_elements
 
-    def get_trails(self, trail_section: Optional[WebElement] = None) -> List['Trail']:
-        """
-        Get the HTML element containing all trail information.
-        If a trail_section is supplied, only return the trails belonging to that section.
-        """
-        if self.trails_grouped_by_section and not trail_section:
-            # If we're requesting all trails AND they're grouped by section, retrieve them section-by-section.
-            trail_sections = self.get_trail_sections()
-            trails = []
-            for trail_section in trail_sections:
-                trails.extend(self.get_trails(trail_section))
-            return trails
-
-        return [
-            Trail(
-                resort=self,
-                name=self.get_trail_name(element),
-                trail_type=self.get_trail_section_name(trail_section)
-                if trail_section else self.get_trail_type(element),
-                status=self.get_trail_status(element),
-                groomed=self.get_trail_groomed(element),
-                night_skiing=self.get_trail_night_skiing(element)
-            ) for element in self.get_trail_elements(trail_section=trail_section)
-        ]
-
-    def get_trail_sections(self) -> List[WebElement]:
-        """Get the HTML container for all trail information."""
-        return self.browser.find_elements(By.CSS_SELECTOR, self.trail_sections_css_selector)
-
-    def get_trail_section_name(self, trail_section: WebElement) -> str:
-        """Return the difficulty or classification of a group of trails."""
-        return trail_section.find_element(By.CSS_SELECTOR, self.trail_section_name_css_selector).text
+    def get_trails(self, trail_name_to_id: Optional[dict] = None) -> List['Trail']:
+        trails = []
+        for trail_element in self.get_trail_elements():
+            trail_name = self.get_trail_name(trail_element)
+            trails.append(
+                Trail(
+                    id=trail_name_to_id.get(
+                        trail_name) if trail_name_to_id else None,
+                    name=trail_name,
+                    trail_type=self.get_trail_type(trail_element),
+                    status=self.get_trail_status(trail_element),
+                    groomed=self.get_trail_groomed(trail_element),
+                    night_skiing=self.get_trail_night_skiing(trail_element)
+                )
+            )
+        return trails
 
     def get_trail_name(self, trail: WebElement) -> str:
         """Find the name of this trail within the HTML element."""
@@ -120,94 +101,50 @@ class Resort():
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         """Return whether or not this trail has lighting for skiing after dark."""
 
-    def get_trails_summary(self) -> List[dict]:
-        trails = self.get_trails()
-        summary = [
-            {
-                'name': trail.name,
-                'trail_type': trail.trail_type,
-                'status': trail.status,
-                'groomed': trail.groomed,
-                'night_skiing': trail.night_skiing
-            } for trail in trails
-        ]
-        return summary
 
-    def get_lifts_summary(self) -> List[dict]:
-        return [
-            {
-                'name': lift.name,
-                'status': lift.status
-            } for lift in self.get_lifts()
-        ]
+class Resort(Base):
+    __tablename__ = 'resorts'
+    id = Column(String, primary_key=True)
+    name = Column(String)
+    parser_name = Column(String)
+    lifts_container_ss_selector = Column(String)
+    trails_container_css_selector = Column(String)
+    trail_css_selector = Column(String)
+    trail_report_url = Column(String)
+    snow_report_url = Column(String)
+
+    def get_parser(self, browser: WebDriver) -> Parser:
+        pass
 
 
-class Lift(Settable):
-    _resort: Resort
-    _name: str
-    _status: str
-
-    @property
-    def resort(self) -> Resort:
-        """An instance of the Resort that this lift belongs to"""
-        return self._resort
-
-    @property
-    def name(self) -> str:
-        """The name of the lift as it appears in reports/maps."""
-        return self._name
-
-    @property
-    def status(self) -> str:
-        """The last-reported status of the lift (i.e. open, closed, on hold)"""
-        return self._status
+class Lift(Base):
+    __tablename__ = 'lifts'
+    id = Column(String, primary_key=True)
+    resort_id = Column(ForeignKey('resorts._id'))
+    name = Column(String)
+    status = Column(String)
 
 
-class Trail(Settable):
-    _resort: Resort
-    _name: str
-    _trail_type: str
-    _status: str
-    _groomed: bool
-    _night_skiing: bool
-
-    @property
-    def resort(self) -> Resort:
-        """An instance of the Resort that this trail belongs to"""
-        return self._resort
-
-    @property
-    def trail_type(self) -> str:
-        """Either the difficulty of the trail, or its type (i.e. "Terrain park")"""
-        return self._trail_type
-
-    @property
-    def name(self) -> str:
-        """The name of the trail as it appears in reports/maps."""
-        return self._name
-
-    @property
-    def status(self) -> str:
-        """The last-reported status of the trail (i.e. open, closed, partially open)"""
-        return self._status
-
-    @property
-    def groomed(self) -> bool:
-        """True when the trail is groomed, False for natural snow."""
-        return self._groomed
-
-    @property
-    def night_skiing(self) -> bool:
-        """True if the trail is open + lit during night skiing hours"""
-        return self._night_skiing
+class Trail(Base):
+    __tablename__ = 'trails'
+    id = Column(String, primary_key=True)
+    resort = Column(ForeignKey('resorts._id'))
+    name = Column(String)
+    trail_type = Column(String)
+    status = Column(String)
+    groomed = Column(Boolean)
+    night_skiing = Column(Boolean)
 
 
-class SnowReport(Resort):
-    _lifts_css_selector = '.SnowReport-Lift.SnowReport-feature'
-    _trails_css_selector = '.SnowReport-Trail.SnowReport-feature'
-    _trail_sections_css_selector = '.SnowReport-section.SnowReport-section--trails'
-    _trail_section_name_css_selector = 'h2.SnowReport-section-title'
-    _trails_grouped_by_section = True
+class SnowReportCSS(Parser):
+    """A common UI setup that seems to be shared by quite a few mountains."""
+
+    def __init__(self, browser: WebDriver, **kwargs):
+        self.lifts_container_css_selector = 'section.SnowReport-section--lifts'
+        self.lift_css_selector = 'article.SnowReport-Lift.SnowReport-feature'
+        self.trails_container_css_selector = 'section.SnowReport-section--trails'
+        self.trail_css_selector = 'article.SnowReport-Trail.SnowReport-feature'
+        super().__init__(browser, **kwargs)
 
     def get_lift_name(self, lift: WebElement) -> str:
         lift_name_element = lift.find_element(
@@ -234,6 +171,15 @@ class SnowReport(Resort):
         trail_status: WebElement = trail_status_icon.find_element(
             By.TAG_NAME, 'span')
         return trail_status.text
+
+    def get_trail_type(self, trail: WebElement) -> str:
+        parent: WebElement = trail.find_element(
+            By.XPATH, 'ancestor::section'
+        )
+        header: WebElement = parent.find_element(
+            By.TAG_NAME, 'h2'
+        )
+        return header.text
 
     def get_trail_groomed(self, trail: WebElement) -> bool:
         try:
