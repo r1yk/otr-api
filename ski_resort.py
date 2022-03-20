@@ -10,7 +10,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.session import Session
 
 import parsers
-from util import get_name_to_id, Settable, get_name_to_self
+from util import Settable, get_name_to_self
 
 Base = declarative_base()
 
@@ -21,6 +21,7 @@ class Lift(Base):
     resort_id = Column(ForeignKey('resorts.id'))
     name = Column(String)
     status = Column(String)
+    updated_at = Column(DateTime)
 
 
 class Trail(Base):
@@ -32,6 +33,8 @@ class Trail(Base):
     status = Column(String)
     groomed = Column(Boolean)
     night_skiing = Column(Boolean)
+    updated_at = Column(DateTime)
+    icon = Column(String)
 
 
 class Resort(Base):
@@ -54,9 +57,8 @@ class Resort(Base):
                                self.__dict__.keys())
         parser_args = {}
         for selector in css_selectors:
-            print(selector)
             parser_args[selector] = getattr(self, selector)
-        print(parser_args)
+
         constructor = getattr(sys.modules['parsers'], self.parser_name)
         return constructor(browser, **parser_args)
 
@@ -73,47 +75,54 @@ class Resort(Base):
         )).scalars()
 
     def scrape_trail_report(self, browser: WebDriver):
-        session: Session = Session.object_session(self)
+        try:
+            session: Session = Session.object_session(self)
 
-        browser.get(self.trail_report_url)
-        parser: 'parsers.Parser' = self.get_parser(browser)
+            browser.get(self.trail_report_url)
+            parser: 'parsers.Parser' = self.get_parser(browser)
 
-        lift_db_rows = self.get_lifts()
-        trail_db_rows = self.get_trails()
-        lift_name_to_self = get_name_to_self(lift_db_rows)
-        trail_name_to_self = get_name_to_self(trail_db_rows)
+            lift_db_rows = self.get_lifts()
+            trail_db_rows = self.get_trails()
+            lift_name_to_self = get_name_to_self(lift_db_rows)
+            trail_name_to_self = get_name_to_self(trail_db_rows)
 
-        scraped_lift_data = parser.get_lifts()
-        for scraped_lift in scraped_lift_data:
-            lift = lift_name_to_self.get(scraped_lift.name)
-            if lift:
-                lift.status = scraped_lift.status
-            else:
-                print('new lift', scraped_lift.name)
-                session.add(Lift(
-                    id=generate_id(),
-                    resort_id=self.id,
-                    name=scraped_lift.name,
-                    status=scraped_lift.status
-                ))
+            scraped_lift_data = parser.get_lifts()
+            for scraped_lift in scraped_lift_data:
+                lift = lift_name_to_self.get(scraped_lift.name)
+                if lift:
+                    lift.status = scraped_lift.status
+                else:
+                    print('new lift', scraped_lift.name)
+                    session.add(Lift(
+                        id=generate_id(),
+                        resort_id=self.id,
+                        name=scraped_lift.name,
+                        status=scraped_lift.status,
+                        updated_at=datetime.now()
+                    ))
 
-        scraped_trail_data = parser.get_trails()
-        for scraped_trail in scraped_trail_data:
-            trail = trail_name_to_self.get(scraped_trail.name)
-            if trail:
-                trail.status = scraped_trail.status
-            else:
-                print('new trail', scraped_trail.name)
-                session.add(Trail(
-                    id=generate_id(),
-                    resort_id=self.id,
-                    name=scraped_trail.name,
-                    trail_type=scraped_trail.trail_type,
-                    status=scraped_trail.status,
-                    groomed=scraped_trail.groomed,
-                    night_skiing=scraped_trail.night_skiing
-                ))
-        self.updated_at = datetime.now()
+            scraped_trail_data = parser.get_trails()
+            for scraped_trail in scraped_trail_data:
+                trail = trail_name_to_self.get(scraped_trail.name)
+                if trail:
+                    trail.status = scraped_trail.status
+                else:
+                    print('new trail', scraped_trail.name)
+                    session.add(Trail(
+                        id=generate_id(),
+                        resort_id=self.id,
+                        name=scraped_trail.name,
+                        trail_type=scraped_trail.trail_type,
+                        status=scraped_trail.status,
+                        groomed=scraped_trail.groomed,
+                        night_skiing=scraped_trail.night_skiing,
+                        icon=scraped_trail.icon,
+                        updated_at=datetime.now()
+                    ))
+            self.updated_at = datetime.now()
+
+        except Exception as e:
+            print(e)
 
 
 # def add_or_update(new_data: Settable, existing_key_value_pairs: dict):

@@ -1,10 +1,23 @@
+from enum import Enum
 from typing import List, Optional
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.chrome.webdriver import WebDriver
 
-import ski_resort
 from util import Settable
+
+
+class Rating(Enum):
+    GREEN = 'green'
+    BLUE = 'blue'
+    BLACK = 'black-1'
+    DOUBLE_BLACK = 'black-2'
+    TRIPLE_BLACK = 'black-3'
+    GLADES = 'glades-blue'
+    DOUBLE_GLADES = 'glades-black'
+    WOODED = 'wooded'
+    TERRAIN_PARK = 'terrain-park'
 
 
 class Parser(Settable):
@@ -12,10 +25,20 @@ class Parser(Settable):
     lift_css_selector: str
     trails_container_css_selector: str
     trail_css_selector: str
+    trail_type_to_rating: dict = {}
 
     def __init__(self, browser: WebDriver, **parser_kwargs):
         self.browser = browser
         super().__init__(**parser_kwargs)
+
+    @classmethod
+    def element_has_child(cls, element: WebElement, css_selector: str) -> bool:
+        try:
+            element.find_element(
+                By.CSS_SELECTOR, css_selector)
+            return True
+        except:
+            return False
 
     def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
@@ -70,7 +93,8 @@ class Parser(Settable):
                 trail_type=self.get_trail_type(trail_element),
                 status=self.get_trail_status(trail_element),
                 groomed=self.get_trail_groomed(trail_element),
-                night_skiing=self.get_trail_night_skiing(trail_element)
+                night_skiing=self.get_trail_night_skiing(trail_element),
+                icon=self.get_trail_icon(trail_element)
             ) for trail_element in self.get_trail_elements()
         ]
 
@@ -88,6 +112,12 @@ class Parser(Settable):
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         """Return whether or not this trail has lighting for skiing after dark."""
+
+    def get_trail_icon(self, trail: WebElement) -> str:
+        trail_type = self.get_trail_type(trail)
+        if trail_type:
+            return self.trail_type_to_rating.get(trail_type)
+        return None
 
 
 class SnowReportCSS(Parser):
@@ -136,25 +166,41 @@ class SnowReportCSS(Parser):
         return header.text
 
     def get_trail_groomed(self, trail: WebElement) -> bool:
-        try:
-            # If this element is found, the trail is groomed.
-            trail.find_element(
-                By.CLASS_NAME, 'pti-groomed')
-            return True
-        except:
-            return False
+        return Parser.element_has_child(trail, '.pti-groomed')
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
-        try:
-            # If this element is found, the trail is open for night skiing.
-            trail.find_element(
-                By.CLASS_NAME, 'pti-moon-mining')
-            return True
-        except:
-            return False
+        return Parser.element_has_child(trail, '.pti-moon-mining')
+
+
+class BoltonValley(SnowReportCSS):
+    trail_type_to_rating: dict = {
+        'EASIER': Rating.GREEN.value,
+        'MODERATE': Rating.BLUE.value,
+        'ADVANCED': Rating.BLACK.value,
+        'EXTREMELY DIFFICULT': Rating.DOUBLE_BLACK.value,
+        'TERRAIN PARK': Rating.TERRAIN_PARK.value
+    }
+
+
+class JayPeak(SnowReportCSS):
+    trail_type_to_rating: dict = {
+        'BEGINNER': Rating.GREEN.value,
+        'INTERMEDIATE': Rating.BLUE.value,
+        'ADVANCED': Rating.BLACK.value,
+        'TERRAIN PARK': Rating.TERRAIN_PARK.value,
+        'INTERMEDIATE GLADE': Rating.GLADES.value,
+        'ADVANCED GLADE': Rating.DOUBLE_GLADES.value
+    }
 
 
 class SuicideSix(Parser):
+    trail_type_to_rating: dict = {
+        'Easy': Rating.GREEN.value,
+        'Intermediate': Rating.BLUE.value,
+        'Advanced': Rating.BLACK.value,
+        'Expert': Rating.DOUBLE_BLACK.value,
+    }
+
     def __init__(self, browser):
         self._lifts_and_trails = None
         super().__init__(browser)
@@ -186,11 +232,9 @@ class SuicideSix(Parser):
                 By.CLASS_NAME, 'node--type-lift-trail'
             )
             for element in all_elements:
-                # If the element has a child with class "level", it's a trail. Otherwise it's a lift.
-                try:
-                    element.find_element(By.CLASS_NAME, 'level')
+                if Parser.element_has_child(element, '.level'):
                     trail_elements.append(element)
-                except:
+                else:
                     lift_elements.append(element)
 
             self._lifts_and_trails = {
@@ -226,6 +270,14 @@ class SuicideSix(Parser):
 
 
 class Stowe(Parser):
+    trail_type_to_rating: dict = {
+        'beginner': Rating.GREEN.value,
+        'intermediate': Rating.BLUE.value,
+        'mostdifficult': Rating.BLACK.value,
+        'expert': Rating.DOUBLE_BLACK.value,
+        'terrainpark': Rating.TERRAIN_PARK.value
+    }
+
     def get_lift_name(self, lift: WebElement) -> str:
         name_element: WebElement = lift.find_element(
             By.CSS_SELECTOR, 'span.liftStatus__lifts__row__title'
@@ -270,19 +322,21 @@ class Stowe(Parser):
         )
 
     def get_trail_groomed(self, trail: WebElement) -> bool:
-        try:
-            trail.find_element(
-                By.CSS_SELECTOR, 'div.icon-status-snowcat'
-            )
-            return True
-        except:
-            return False
+        return Parser.element_has_child(trail, 'div.icon-status-snowcat')
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
 
 
 class Sugarbush(Parser):
+    trail_type_to_rating: dict = {
+        'Easiest': Rating.GREEN.value,
+        'More Difficult': Rating.BLUE.value,
+        'Very Difficult': Rating.BLACK.value,
+        'Expert': Rating.DOUBLE_BLACK.value,
+        'Wooded Area': Rating.WOODED.value
+    }
+
     def get_lift_name(self, lift: WebElement) -> str:
         return lift.find_element(
             By.CSS_SELECTOR, 'h3.Lifts_name__1YvQ1'
@@ -320,6 +374,50 @@ class Sugarbush(Parser):
             return False
         except:
             return False
+
+    def get_trail_night_skiing(self, trail: WebElement) -> bool:
+        return False
+
+
+class BurkeMountain(Parser):
+    trail_type_to_rating: dict = {
+        'level-1': Rating.GREEN.value,
+        'level-2': Rating.BLUE.value,
+        'level-3': Rating.BLACK.value,
+        'level-4': Rating.DOUBLE_BLACK.value
+    }
+
+    def get_lift_name(self, lift: WebElement) -> str:
+        return lift.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Lift Name"]'
+        ).text
+
+    def get_lift_status(self, lift: WebElement) -> str:
+        status: WebElement = lift.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Status"] > span'
+        )
+        return status.text
+
+    def get_trail_name(self, trail: WebElement) -> str:
+        return trail.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Trail Name"] > div.label'
+        ).text
+
+    def get_trail_type(self, trail: WebElement) -> str:
+        type_element: WebElement = trail.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Trail Name"] > div.label > span'
+        )
+        return type_element.get_attribute('class')
+
+    def get_trail_status(self, trail: WebElement) -> str:
+        return trail.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Status"] > span'
+        ).get_attribute('class')
+
+    def get_trail_groomed(self, trail: WebElement) -> bool:
+        return trail.find_element(
+            By.CSS_SELECTOR, 'td[data-label="Groomed"] > span'
+        ).get_attribute('class') == 'open'
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
