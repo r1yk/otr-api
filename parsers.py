@@ -4,7 +4,9 @@ from typing import List, Optional
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.support.ui import WebDriverWait
 
+import ski_resort
 from util import Settable
 
 
@@ -21,15 +23,12 @@ class Rating(Enum):
 
 
 class Parser(Settable):
-    lifts_container_css_selector: str
-    lift_css_selector: str
-    trails_container_css_selector: str
-    trail_css_selector: str
+    lift_css_selector = None
+    trail_css_selector = None
     trail_type_to_rating: dict = {}
 
-    def __init__(self, browser: WebDriver, **parser_kwargs):
+    def __init__(self, browser: WebDriver):
         self.browser = browser
-        super().__init__(**parser_kwargs)
 
     @classmethod
     def element_has_child(cls, element: WebElement, css_selector: str) -> bool:
@@ -42,19 +41,12 @@ class Parser(Settable):
 
     def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        if hasattr(self, 'lifts_container_css_selector'):
-            lift_elements = []
-            lifts_containers = self.browser.find_elements(
-                By.CSS_SELECTOR, self.lifts_container_css_selector
-            )
-            for container in lifts_containers:
-                lift_elements.extend(container.find_elements(
-                    By.CSS_SELECTOR, self.lift_css_selector))
-            return lift_elements
-
-        return self.browser.find_elements(
+        print('looking for lifts...')
+        elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
             By.CSS_SELECTOR, self.lift_css_selector
-        )
+        ))
+        print('found lifts!')
+        return elements
 
     def get_lift_name(self, lift: WebElement) -> str:
         """Find the name of this lift within the HTML element."""
@@ -62,36 +54,28 @@ class Parser(Settable):
     def get_lift_status(self, lift: WebElement) -> str:
         """Find the status of this lift within the HTML element."""
 
-    def get_lifts(self) -> List['Settable']:
+    def get_lifts(self) -> List['ski_resort.Lift']:
         return [
-            Settable(
+            ski_resort.Lift(
                 name=self.get_lift_name(lift_element),
-                status=self.get_lift_status(lift_element)
+                status=self.get_lift_status(lift_element).lower()
             ) for lift_element in self.get_lift_elements()
         ]
 
     def get_trail_elements(self) -> List[WebElement]:
-        if hasattr(self, 'trails_container_css_selector'):
-            trail_elements = []
-            trails_containers = self.browser.find_elements(
-                By.CSS_SELECTOR, self.trails_container_css_selector
-            )
-            for container in trails_containers:
-                trail_elements.extend(
-                    container.find_elements(
-                        By.CSS_SELECTOR, self.trail_css_selector))
-            return trail_elements
-
-        return self.browser.find_elements(
+        print('looking for trails...')
+        elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
             By.CSS_SELECTOR, self.trail_css_selector
-        )
+        ))
+        print('found trails!')
+        return elements
 
-    def get_trails(self) -> List['Settable']:
+    def get_trails(self) -> List['ski_resort.Trail']:
         return [
-            Settable(
+            ski_resort.Trail(
                 name=self.get_trail_name(trail_element),
                 trail_type=self.get_trail_type(trail_element),
-                status=self.get_trail_status(trail_element),
+                status=self.get_trail_status(trail_element).lower(),
                 groomed=self.get_trail_groomed(trail_element),
                 night_skiing=self.get_trail_night_skiing(trail_element),
                 icon=self.get_trail_icon(trail_element)
@@ -122,13 +106,8 @@ class Parser(Settable):
 
 class SnowReportCSS(Parser):
     """A common UI setup that seems to be shared by quite a few mountains."""
-
-    def __init__(self, browser: WebDriver, **kwargs):
-        self.lifts_container_css_selector = 'section.SnowReport-section--lifts'
-        self.lift_css_selector = 'article.SnowReport-Lift.SnowReport-feature'
-        self.trails_container_css_selector = 'section.SnowReport-section--trails'
-        self.trail_css_selector = 'article.SnowReport-Trail.SnowReport-feature'
-        super().__init__(browser, **kwargs)
+    lift_css_selector = 'article.SnowReport-Lift.SnowReport-feature'
+    trail_css_selector = 'article.SnowReport-Trail.SnowReport-feature'
 
     def get_lift_name(self, lift: WebElement) -> str:
         lift_name_element = lift.find_element(
@@ -270,6 +249,9 @@ class SuicideSix(Parser):
 
 
 class Stowe(Parser):
+    lift_css_selector = '.liftStatus__lifts__row'
+    trail_css_selector = '.trailStatus__trails__row'
+
     trail_type_to_rating: dict = {
         'beginner': Rating.GREEN.value,
         'intermediate': Rating.BLUE.value,
@@ -329,6 +311,9 @@ class Stowe(Parser):
 
 
 class Sugarbush(Parser):
+    lift_css_selector = 'ul.Lifts_list__3PwcO > li'
+    trail_css_selector = 'ul.Trails_trailsList__3gYwp > li'
+
     trail_type_to_rating: dict = {
         'Easiest': Rating.GREEN.value,
         'More Difficult': Rating.BLUE.value,
@@ -380,6 +365,9 @@ class Sugarbush(Parser):
 
 
 class BurkeMountain(Parser):
+    lift_css_selector = 'div#lifts > table > tbody > tr'
+    trail_css_selector = 'div#trails > table > tbody >tr'
+
     trail_type_to_rating: dict = {
         'level-1': Rating.GREEN.value,
         'level-2': Rating.BLUE.value,

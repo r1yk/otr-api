@@ -1,16 +1,17 @@
 from datetime import datetime
 import sys
+from time import sleep
+from traceback import print_exception
 from typing import List
 
 from nanoid import generate as generate_id
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.webdriver import WebDriver
-from sqlalchemy import Boolean, Column, DateTime, String, ForeignKey, select
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey, select
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.session import Session
 
 import parsers
-from util import Settable, get_name_to_self
+from util import get_name_to_self
 
 Base = declarative_base()
 
@@ -42,25 +43,15 @@ class Resort(Base):
     id = Column(String, primary_key=True)
     name = Column(String)
     parser_name = Column(String)
-    lifts_container_css_selector = Column(String)
-    lift_css_selector = Column(String)
-    trails_container_css_selector = Column(String)
-    trail_css_selector = Column(String)
     trail_report_url = Column(String)
     snow_report_url = Column(String)
     updated_at = Column(DateTime)
+    additional_wait_seconds = Column(Integer)
 
     def get_parser(self, browser: WebDriver) -> 'parsers.Parser':
         """Construct and return an instance of a `Parser` based on the `parser_name` column in the database."""
-        css_selectors = filter(lambda column_name: 'css_selector' in column_name
-                               and getattr(self, column_name) is not None,
-                               self.__dict__.keys())
-        parser_args = {}
-        for selector in css_selectors:
-            parser_args[selector] = getattr(self, selector)
-
         constructor = getattr(sys.modules['parsers'], self.parser_name)
-        return constructor(browser, **parser_args)
+        return constructor(browser)
 
     def get_lifts(self) -> List['Lift']:
         session: Session = Session.object_session(self)
@@ -77,52 +68,34 @@ class Resort(Base):
     def scrape_trail_report(self, browser: WebDriver):
         try:
             session: Session = Session.object_session(self)
-
             browser.get(self.trail_report_url)
+            if self.additional_wait_seconds:
+                print('Additional wait: ', self.additional_wait_seconds)
+                sleep(self.additional_wait_seconds)
+
             parser: 'parsers.Parser' = self.get_parser(browser)
 
-            lift_db_rows = self.get_lifts()
-            trail_db_rows = self.get_trails()
-            lift_name_to_self = get_name_to_self(lift_db_rows)
-            trail_name_to_self = get_name_to_self(trail_db_rows)
+            db_lifts, scraped_lifts = self.get_lifts(), parser.get_lifts()
+            db_trails, scraped_trails = self.get_trails(), parser.get_trails()
 
-            scraped_lift_data = parser.get_lifts()
-            for scraped_lift in scraped_lift_data:
-                lift = lift_name_to_self.get(scraped_lift.name)
-                if lift:
-                    lift.status = scraped_lift.status
-                else:
-                    print('new lift', scraped_lift.name)
-                    session.add(Lift(
-                        id=generate_id(),
-                        resort_id=self.id,
-                        name=scraped_lift.name,
-                        status=scraped_lift.status,
-                        updated_at=datetime.now()
-                    ))
+            for pair in [(db_lifts, scraped_lifts), (db_trails, scraped_trails)]:
+                db_rows, scraped_data = pair[0], pair[1]
+                name_lookup = get_name_to_self(db_rows)
+                for scraped_item in scraped_data:
+                    scraped_item.updated_at = datetime.now()
+                    item = name_lookup.get(scraped_item.name)
+                    # If this item exists in the database, merge in any freshly-scraped data.
+                    if item:
+                        scraped_item.id = item.id
+                        session.merge(scraped_item)
+                    # Otherwise add a new item to the database that's tied to this resort.
+                    else:
+                        print('new item', scraped_item.name)
+                        scraped_item.id = generate_id()
+                        scraped_item.resort_id = self.id
+                        session.add(scraped_item)
 
-            scraped_trail_data = parser.get_trails()
-            for scraped_trail in scraped_trail_data:
-                trail = trail_name_to_self.get(scraped_trail.name)
-                if trail:
-                    trail.status = scraped_trail.status
-                else:
-                    print('new trail', scraped_trail.name)
-                    session.add(Trail(
-                        id=generate_id(),
-                        resort_id=self.id,
-                        name=scraped_trail.name,
-                        trail_type=scraped_trail.trail_type,
-                        status=scraped_trail.status,
-                        groomed=scraped_trail.groomed,
-                        night_skiing=scraped_trail.night_skiing,
-                        icon=scraped_trail.icon,
-                        updated_at=datetime.now()
-                    ))
             self.updated_at = datetime.now()
 
         except Exception as e:
-            print(e)
-
-
-# def add_or_update(new_data: Settable, existing_key_value_pairs: dict):
+            print_exception(e)
