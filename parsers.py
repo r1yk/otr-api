@@ -41,11 +41,11 @@ class Parser(Settable):
 
     def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        print('looking for lifts...')
+        print('Looking for lifts...')
         elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
             By.CSS_SELECTOR, self.lift_css_selector
         ))
-        print('found lifts!')
+        print(f'Found {len(elements)} lifts')
         return elements
 
     def get_lift_name(self, lift: WebElement) -> str:
@@ -63,11 +63,11 @@ class Parser(Settable):
         ]
 
     def get_trail_elements(self) -> List[WebElement]:
-        print('looking for trails...')
+        print('Looking for trails...')
         elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
             By.CSS_SELECTOR, self.trail_css_selector
         ))
-        print('found trails!')
+        print(f'Found {len(elements)} trails')
         return elements
 
     def get_trails(self) -> List['ski_resort.Trail']:

@@ -11,7 +11,7 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm.session import Session
 
 import parsers
-from util import get_name_to_self
+from util import get_name_to_self, get_changes
 
 Base = declarative_base()
 
@@ -66,9 +66,12 @@ class Resort(Base):
         )).scalars()
 
     def scrape_trail_report(self, browser: WebDriver):
+        print(f'scraping {self.name}...')
         try:
+            now = datetime.now()
             session: Session = Session.object_session(self)
             browser.get(self.trail_report_url)
+            print('Loaded', self.trail_report_url)
             if self.additional_wait_seconds:
                 print('Additional wait: ', self.additional_wait_seconds)
                 sleep(self.additional_wait_seconds)
@@ -82,20 +85,24 @@ class Resort(Base):
                 db_rows, scraped_data = pair[0], pair[1]
                 name_lookup = get_name_to_self(db_rows)
                 for scraped_item in scraped_data:
-                    scraped_item.updated_at = datetime.now()
                     item = name_lookup.get(scraped_item.name)
                     # If this item exists in the database, merge in any freshly-scraped data.
                     if item:
                         scraped_item.id = item.id
                         session.merge(scraped_item)
+                        changes = get_changes(item)
+                        if changes:
+                            print('UPDATE:', item.name, changes)
+                            item.updated_at = now
                     # Otherwise add a new item to the database that's tied to this resort.
                     else:
                         print('new item', scraped_item.name)
                         scraped_item.id = generate_id()
                         scraped_item.resort_id = self.id
+                        scraped_item.updated_at = now
                         session.add(scraped_item)
 
-            self.updated_at = datetime.now()
+            self.updated_at = now
 
         except Exception as e:
             print_exception(e)

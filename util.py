@@ -1,4 +1,5 @@
 from typing import List
+from sqlalchemy import inspect
 
 
 class Settable():
@@ -29,3 +30,27 @@ def get_name_to_id(rows: List[any]) -> dict:
 
 def get_name_to_self(rows: List[any]) -> dict:
     return get_key_value_pairs(items=rows, key='name')
+
+
+def get_changes(model) -> dict:
+    """
+    Return a dictionary containing changes made to the model since it was 
+    fetched from the database.
+    """
+    state = inspect(model)
+    changes = {}
+    for attr in state.attrs:
+        hist = state.get_history(attr.key, True)
+
+        if not hist.has_changes():
+            continue
+
+        old_value = hist.deleted[0] if hist.deleted else None
+        new_value = hist.added[0] if hist.added else None
+        changes[attr.key] = (old_value, new_value)
+
+    return changes
+
+
+def get_has_changed(model) -> dict:
+    return bool(get_changes(model))
