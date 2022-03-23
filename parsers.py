@@ -55,12 +55,15 @@ class Parser(Settable):
         """Find the status of this lift within the HTML element."""
 
     def get_lifts(self) -> List['ski_resort.Lift']:
-        return [
-            ski_resort.Lift(
+        lifts = []
+        for lift_element in self.get_lift_elements():
+            lift = ski_resort.Lift(
                 name=self.get_lift_name(lift_element),
-                status=self.get_lift_status(lift_element).lower()
-            ) for lift_element in self.get_lift_elements()
-        ]
+                unique_name=self.get_lift_name(lift_element),
+                status=self.get_lift_status(lift_element))
+            lift.is_open = lift.status.lower() == 'open'
+            lifts.append(lift)
+        return lifts
 
     def get_trail_elements(self) -> List[WebElement]:
         print('Looking for trails...')
@@ -71,16 +74,19 @@ class Parser(Settable):
         return elements
 
     def get_trails(self) -> List['ski_resort.Trail']:
-        return [
-            ski_resort.Trail(
+        trails = []
+        for trail_element in self.get_trail_elements():
+            trail = ski_resort.Trail(
                 name=self.get_trail_name(trail_element),
                 trail_type=self.get_trail_type(trail_element),
                 status=self.get_trail_status(trail_element).lower(),
                 groomed=self.get_trail_groomed(trail_element),
                 night_skiing=self.get_trail_night_skiing(trail_element),
                 icon=self.get_trail_icon(trail_element)
-            ) for trail_element in self.get_trail_elements()
-        ]
+            )
+            trail.is_open = trail.status.lower() == 'open'
+            trails.append(trail)
+        return trails
 
     def get_trail_name(self, trail: WebElement) -> str:
         """Find the name of this trail within the HTML element."""
