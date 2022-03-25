@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
 from dotenv import dotenv_values
@@ -39,7 +39,8 @@ def scrape_resorts(query: Optional[Query] = None) -> None:
     resort_query = query or select(Resort).where(
         or_(
             Resort.updated_at == None,
-            Resort.updated_at < datetime.now() - timedelta(minutes=10)
+            Resort.updated_at < datetime.now(
+                timezone.utc) - timedelta(minutes=10)
         )
     )
 

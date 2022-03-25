@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import sys
 from time import sleep
 from traceback import print_exception
@@ -102,7 +102,7 @@ class Resort(Base):
     def scrape_trail_report(self, browser: WebDriver):
         print(f'scraping {self.name}...')
         try:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             browser.get(self.trail_report_url)
             print('Loaded', self.trail_report_url)
             if self.additional_wait_seconds:
