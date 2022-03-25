@@ -1,5 +1,6 @@
 """Provide access to the SQL backend."""
 
+from os import getenv
 from ssl import SSLContext
 from dotenv import dotenv_values
 from pg8000.dbapi import Connection
@@ -46,9 +47,16 @@ def get_engine(db_name: str) -> Engine:
     """Get the running instance of a SQLAlchemy `Engine`."""
     global engine
     if engine is None:
-        engine = create_engine(
-            f"postgresql+pg8000://{USER}:{PASSWORD}@{HOST}:{PORT}/{db_name}",
-            echo=False)
+        if getenv('OTR_CLOUD'):
+            engine = create_engine(
+                f"postgresql+pg8000://{USER}:{PASSWORD}@/{db_name}"
+                f"?unix_sock=/cloudsql/{getenv('CLOUDSQL_INSTANCE_ID')}/.s.PGSQL.5432",
+                echo=False)
+        else:
+            engine = create_engine(
+                f"postgresql+pg8000://{USER}:{PASSWORD}@{HOST}:{PORT}/{db_name}",
+                creator=get_connection,
+                echo=False)
 
     return engine
 

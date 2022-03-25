@@ -1,0 +1,8 @@
+.git
+.gcloudignore
+.vscode
+examples
+keys
+venv
+__pycache__
+scripts
