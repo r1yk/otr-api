@@ -9,13 +9,11 @@ from typing import List, Optional
 from dotenv import dotenv_values
 from nanoid import generate as generate_id
 from selenium.webdriver import Chrome
-
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
-
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Query
 from sqlalchemy.orm.session import Session

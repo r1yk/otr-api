@@ -4,7 +4,7 @@ from selenium.webdriver.remote.webelement import WebElement
 from webscraper import Parser, Rating
 
 
-class Stowe(Parser):
+class Vail(Parser):
     lift_css_selector = '.liftStatus__lifts__row'
     trail_css_selector = '.trailStatus__trails__row'
 
