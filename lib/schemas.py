@@ -11,6 +11,10 @@ class BaseModel(PydanticBase):
 class Resort(BaseModel):
     id: str
     name: str
+    open_lifts: int
+    open_trails: int
+    total_lifts: int
+    total_trails: int
     trail_report_url: str
     updated_at: datetime
 
