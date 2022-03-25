@@ -4,10 +4,10 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
-from postgres import get_session
-from scrape import scrape_resort
-import schemas
-from ski_resort import Resort, Trail
+from lib.postgres import get_session
+from webscraper import scrape_resort
+from lib.models import Resort, Trail
+import lib.schemas as schemas
 
 app = FastAPI()
 
