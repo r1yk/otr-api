@@ -48,3 +48,5 @@ class Resort(Base):
     open_trails = Column(Integer)
     total_lifts = Column(Integer)
     open_lifts = Column(Integer)
+    city = Column(String)
+    state = Column(String)

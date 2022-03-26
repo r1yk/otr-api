@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +23,7 @@ app.add_middleware(
 )
 
 
-@app.get("/resorts/", response_model=List[schemas.Resort])
+@app.get("/resorts", response_model=List[schemas.Resort])
 def get_resorts(db: Session = Depends(get_session)):
     resorts = db.query(Resort).all()
     return resorts

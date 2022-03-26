@@ -24,7 +24,7 @@ class BurkeMountain(Parser):
         status: WebElement = lift.find_element(
             By.CSS_SELECTOR, 'td[data-label="Status"] > span'
         )
-        return status.text
+        return status.get_attribute('class')
 
     def get_trail_name(self, trail: WebElement) -> str:
         return trail.find_element(
