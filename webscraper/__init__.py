@@ -24,15 +24,15 @@ from lib.util import get_key_value_pairs, get_changes, Settable
 
 
 class Rating(Enum):
-    GREEN = 'green'
-    BLUE = 'blue'
-    BLACK = 'black-1'
-    DOUBLE_BLACK = 'black-2'
-    TRIPLE_BLACK = 'black-3'
-    GLADES = 'glades-blue'
-    DOUBLE_GLADES = 'glades-black'
-    WOODED = 'wooded'
-    TERRAIN_PARK = 'terrain-park'
+    GREEN = 0
+    BLUE = 1
+    BLACK = 2
+    DOUBLE_BLACK = 3
+    TRIPLE_BLACK = 4
+    GLADES = 5
+    DOUBLE_GLADES = 6
+    WOODED = 7
+    TERRAIN_PARK = 8
 
 
 class Parser(Settable):

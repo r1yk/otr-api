@@ -31,8 +31,9 @@ class Lift(BaseModel):
 class Trail(BaseModel):
     id: str
     name: str
-    icon: Optional[str]
+    icon: Optional[int]
     status: str
+    is_open: bool
     night_skiing: bool
     groomed: Optional[bool]
     updated_at: datetime
