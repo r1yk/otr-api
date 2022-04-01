@@ -14,6 +14,10 @@ class Settable():
 
 
 def get_key_value_pairs(items: List[any], key: str, value: str = None, strict: bool = False) -> dict:
+    """
+    Accept a list of database rows, and return a mapping from the value in the `key` column
+    to the value in the `value` column.
+    """
     key_value_pairs = {}
     for item in items:
         if hasattr(item, key) and (not strict or hasattr(item, value)):
@@ -25,10 +29,12 @@ def get_key_value_pairs(items: List[any], key: str, value: str = None, strict: b
 
 
 def get_name_to_id(rows: List[any]) -> dict:
+    """Accept a list of database rows, and return a mapping from their name to their ID."""
     return get_key_value_pairs(key='name', value='id', items=rows, strict=True)
 
 
 def get_name_to_self(rows: List[any]) -> dict:
+    """Accept a list of database rows, and return a mapping from their name to themselves."""
     return get_key_value_pairs(items=rows, key='name')
 
 
@@ -50,7 +56,3 @@ def get_changes(model) -> dict:
         changes[attr.key] = (old_value, new_value)
 
     return changes
-
-
-def get_has_changed(model) -> dict:
-    return bool(get_changes(model))

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 from pydantic import BaseModel as PydanticBase
 
@@ -26,15 +26,19 @@ class Lift(BaseModel):
     name: str
     status: str
     is_open: bool
+    last_closed_on: date
+    last_opened_on: date
     updated_at: datetime
 
 
 class Trail(BaseModel):
     id: str
     name: str
-    icon: Optional[int]
+    rating: Optional[int]
     status: str
     is_open: bool
+    last_closed_on: date
+    last_opened_on: date
     night_skiing: bool
     groomed: Optional[bool]
     updated_at: datetime

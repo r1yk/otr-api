@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, ForeignKey
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, ForeignKey
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -12,6 +12,8 @@ class Lift(Base):
     unique_name = Column(String)
     status = Column(String)
     is_open = Column(Boolean)
+    last_closed_on = Column(Date)
+    last_opened_on = Column(Date)
     updated_at = Column(DateTime)
 
 
@@ -24,10 +26,12 @@ class Trail(Base):
     trail_type = Column(String)
     status = Column(String)
     is_open = Column(Boolean)
+    last_closed_on = Column(Date)
+    last_opened_on = Column(Date)
     groomed = Column(Boolean)
     night_skiing = Column(Boolean)
     updated_at = Column(DateTime)
-    icon = Column(String)
+    rating = Column(Integer)
 
     def __init__(self, *args, **kwargs):
         if kwargs.get('name') and kwargs.get('trail_type'):
