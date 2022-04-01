@@ -6,3 +6,4 @@ keys
 venv
 __pycache__
 scripts
+.env

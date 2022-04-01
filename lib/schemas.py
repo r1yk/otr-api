@@ -25,6 +25,7 @@ class Lift(BaseModel):
     id: str
     name: str
     status: str
+    is_open: bool
     updated_at: datetime
 
 

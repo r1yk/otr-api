@@ -11,6 +11,15 @@ from webscraper import scrape_resort
 
 app = FastAPI()
 
+
+db = get_session()
+
+
+@app.get("/")
+def home():
+    return {}
+
+
 origins = [
     "http://localhost:3000",
     "http://localhost:3080",
@@ -24,13 +33,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-db = get_session()
-
 
 @app.get("/resorts", response_model=List[schemas.Resort])
 def get_resorts():
-    resorts = db.query(Resort).all()
-    return resorts
+    return db.query(Resort).order_by(
+        Resort.name.asc()
+    ).all()
 
 
 @app.post("/resorts/{resort_id}/scrape", response_model=schemas.Resort, include_in_schema=False)
@@ -46,9 +54,13 @@ def get_resort_by_id(resort_id: str):
 
 @app.get("/resorts/{resort_id}/lifts", response_model=List[schemas.Lift])
 def get_lifts_by_resort(resort_id: str):
-    return db.query(Lift).filter_by(resort_id=resort_id).all()
+    return db.query(Lift).filter_by(resort_id=resort_id).order_by(
+        Lift.is_open.desc(), Lift.name.asc()
+    ).all()
 
 
 @app.get("/resorts/{resort_id}/trails", response_model=List[schemas.Trail])
 def get_trails_by_resort(resort_id: str):
-    return db.query(Trail).filter_by(resort_id=resort_id).order_by(Trail.icon.asc(), Trail.is_open.desc(), Trail.name.asc()).all()
+    return db.query(Trail).filter_by(resort_id=resort_id).order_by(
+        Trail.icon.asc(), Trail.is_open.desc(), Trail.name.asc()
+    ).all()

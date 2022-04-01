@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from importlib import import_module
 import sys
@@ -21,6 +21,8 @@ from sqlalchemy.orm.session import Session
 from lib.models import Resort, Lift, Trail
 from lib.postgres import get_session
 from lib.util import get_key_value_pairs, get_changes, Settable
+
+LOCAL_TZ = datetime.now().astimezone().tzinfo
 
 
 class Rating(Enum):
@@ -178,7 +180,7 @@ class Webscraper:
     def scrape_trail_report(self):
         print(f'scraping {self.resort.name}...')
         try:
-            now = datetime.now()
+            now = datetime.now(LOCAL_TZ)
             self.browser.get(self.resort.trail_report_url)
             print('Loaded', self.resort.trail_report_url)
             if self.resort.additional_wait_seconds:

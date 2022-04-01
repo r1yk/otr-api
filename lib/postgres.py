@@ -9,11 +9,12 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import sessionmaker, Session
 
 CONFIG = dotenv_values()
-HOST = CONFIG['PG_HOST']
+
+HOST = CONFIG.get('PG_HOST', getenv('PG_HOST'))
 PORT = CONFIG.get('PG_PORT', 5432)
-DATABASE = CONFIG['DB_NAME']
-USER = CONFIG['PG_USERNAME']
-PASSWORD = CONFIG['PG_PASSWORD']
+DATABASE = CONFIG.get('DB_NAME',  getenv('DB_NAME'))
+USER = CONFIG.get('PG_USERNAME', getenv('PG_USERNAME'))
+PASSWORD = CONFIG.get('PG_PASSWORD', getenv('PG_PASSWORD'))
 
 # Globals for managing DB connections
 engine = None
@@ -55,6 +56,7 @@ def get_engine(db_name: str) -> Engine:
         else:
             engine = create_engine(
                 f"postgresql+pg8000://{USER}:{PASSWORD}@{HOST}:{PORT}/{db_name}",
+                creator=get_connection,
                 echo=False)
 
     return engine
