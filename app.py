@@ -62,5 +62,5 @@ def get_lifts_by_resort(resort_id: str):
 @app.get("/resorts/{resort_id}/trails", response_model=List[schemas.Trail])
 def get_trails_by_resort(resort_id: str):
     return db.query(Trail).filter_by(resort_id=resort_id).order_by(
-        Trail.icon.asc(), Trail.is_open.desc(), Trail.name.asc()
+        Trail.rating.asc(), Trail.is_open.desc(), Trail.name.asc()
     ).all()

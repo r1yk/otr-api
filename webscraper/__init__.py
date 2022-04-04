@@ -55,11 +55,10 @@ class Parser(Settable):
 
     def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        print('Looking for lifts...')
         elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
             By.CSS_SELECTOR, self.lift_css_selector
         ))
-        print(f'Found {len(elements)} lifts')
+        print(f'{len(elements)} lifts')
         return elements
 
     def get_lift_name(self, lift: WebElement) -> str:
@@ -188,7 +187,7 @@ class Webscraper:
         """Trigger the end-to-end webscraping session."""
         print('\n', f'scraping {self.resort.name}...')
         try:
-            now = datetime.now(tz=datetime.now().astimezone().tzinfo)
+            now = datetime.utcnow()
             self.browser.get(self.resort.trail_report_url)
             print('Loaded', self.resort.trail_report_url)
             if self.resort.additional_wait_seconds:
@@ -257,7 +256,7 @@ def scrape_resorts(query: Optional[Query] = None) -> None:
     resort_query = query or select(Resort).where(
         or_(
             Resort.updated_at == None,
-            Resort.updated_at < datetime.now() - timedelta(minutes=10)
+            Resort.updated_at < datetime.utcnow() - timedelta(minutes=10)
         )
     )
 

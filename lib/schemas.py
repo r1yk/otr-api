@@ -26,8 +26,8 @@ class Lift(BaseModel):
     name: str
     status: str
     is_open: bool
-    last_closed_on: date
-    last_opened_on: date
+    last_closed_on: Optional[date]
+    last_opened_on: Optional[date]
     updated_at: datetime
 
 
@@ -37,8 +37,8 @@ class Trail(BaseModel):
     rating: Optional[int]
     status: str
     is_open: bool
-    last_closed_on: date
-    last_opened_on: date
+    last_closed_on: Optional[date]
+    last_opened_on: Optional[date]
     night_skiing: bool
     groomed: Optional[bool]
     updated_at: datetime
