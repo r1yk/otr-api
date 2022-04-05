@@ -3,4 +3,4 @@ venv
 .env
 examples
 keys
-cloudenv.yaml
+*env.yaml
