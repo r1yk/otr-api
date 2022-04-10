@@ -1,11 +1,12 @@
-from typing import List
+from typing import List, Optional, Union
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import and_, nulls_last
 
 from lib.postgres import get_session
-from lib.models import Lift, Resort, Trail
+from lib.models import Lift, Resort, Trail, UserResort
 import lib.schemas as schemas
 from webscraper import scrape_resort
 
@@ -31,14 +32,43 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE"]
 )
 
 
-@app.get("/resorts", response_model=List[schemas.Resort])
-def get_resorts():
+@app.get("/resorts", response_model=Union[List[schemas.ResortWithUser], List[schemas.Resort]])
+def get_resorts(user: Optional[str] = None):
+    if user:
+        query = db.query(Resort, UserResort.user_id).join(
+            UserResort,
+            and_(UserResort.resort_id == Resort.id, UserResort.user_id == user),
+            isouter=True
+        ).order_by(nulls_last(UserResort.user_id), Resort.name.asc()
+                   ).all()
+        return [schemas.ResortWithUser(**q[0].__dict__, user_id=q[1]) for q in query]
+
     return db.query(Resort).order_by(
         Resort.name.asc()
     ).all()
+
+
+@app.post("/resorts/{resort_id}/pin")
+def pin_resort_by_id(resort_id: str, user: str):
+    db.add(
+        UserResort(user_id=user, resort_id=resort_id)
+    )
+    db.commit()
+    return {}
+
+
+@app.delete("/resorts/{delete_resort_id}/pin")
+def delete_resort_pin_by_id(delete_resort_id: str, user: str):
+    user_resort = db.query(UserResort).filter_by(
+        resort_id=delete_resort_id, user_id=user
+    ).one()
+    db.delete(user_resort)
+    db.commit()
+    return {}
 
 
 @app.post("/resorts/{resort_id}/scrape", response_model=schemas.Resort, include_in_schema=False)

@@ -1,5 +1,5 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, ForeignKey
-from sqlalchemy.orm import declarative_base
+from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, ForeignKey, Table
+from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
@@ -54,3 +54,17 @@ class Resort(Base):
     open_lifts = Column(Integer)
     city = Column(String)
     state = Column(String)
+
+
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(String, primary_key=True)
+    email = Column(String)
+    email_verified = Column(Boolean)
+    created_at = Column(DateTime)
+
+
+class UserResort(Base):
+    __tablename__ = 'user_resorts'
+    user_id = Column(ForeignKey('users.id'), primary_key=True)
+    resort_id = Column(ForeignKey('resorts.id'), primary_key=True)

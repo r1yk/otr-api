@@ -187,7 +187,7 @@ class Webscraper:
         """Trigger the end-to-end webscraping session."""
         print('\n', f'scraping {self.resort.name}...')
         try:
-            now = datetime.utcnow()
+            now = datetime.now()
             self.browser.get(self.resort.trail_report_url)
             print('Loaded', self.resort.trail_report_url)
             if self.resort.additional_wait_seconds:

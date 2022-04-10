@@ -1,11 +1,18 @@
 from datetime import datetime, date
-from typing import Optional
+from typing import Union, Optional
 from pydantic import BaseModel as PydanticBase
 
 
 class BaseModel(PydanticBase):
     class Config:
         orm_mode = True
+
+
+class User(BaseModel):
+    id: str
+    email: str
+    email_verified: bool
+    created_at: datetime
 
 
 class Resort(BaseModel):
@@ -19,6 +26,10 @@ class Resort(BaseModel):
     total_trails: int
     trail_report_url: str
     updated_at: datetime
+
+
+class ResortWithUser(Resort):
+    user_id: Union[str, None]
 
 
 class Lift(BaseModel):
@@ -42,3 +53,10 @@ class Trail(BaseModel):
     night_skiing: bool
     groomed: Optional[bool]
     updated_at: datetime
+
+
+class UserResorts(BaseModel):
+    id: str
+    resort_id: str
+    user_id: str
+    created_at: datetime
