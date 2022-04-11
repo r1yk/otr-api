@@ -13,7 +13,12 @@ from webscraper import scrape_resort
 app = FastAPI()
 
 
-db = get_session()
+async def get_db():
+    db = get_session()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @app.get("/")
@@ -37,7 +42,7 @@ app.add_middleware(
 
 
 @app.get("/resorts", response_model=Union[List[schemas.ResortWithUser], List[schemas.Resort]])
-def get_resorts(user: Optional[str] = None):
+def get_resorts(user: Optional[str] = None, db: Session = Depends(get_db)):
     if user:
         query = db.query(Resort, UserResort.user_id).join(
             UserResort,
@@ -53,7 +58,7 @@ def get_resorts(user: Optional[str] = None):
 
 
 @app.post("/resorts/{resort_id}/pin")
-def pin_resort_by_id(resort_id: str, user: str):
+def pin_resort_by_id(resort_id: str, user: str,  db: Session = Depends(get_db)):
     db.add(
         UserResort(user_id=user, resort_id=resort_id)
     )
@@ -62,7 +67,7 @@ def pin_resort_by_id(resort_id: str, user: str):
 
 
 @app.delete("/resorts/{delete_resort_id}/pin")
-def delete_resort_pin_by_id(delete_resort_id: str, user: str):
+def delete_resort_pin_by_id(delete_resort_id: str, user: str,  db: Session = Depends(get_db)):
     user_resort = db.query(UserResort).filter_by(
         resort_id=delete_resort_id, user_id=user
     ).one()
@@ -72,25 +77,25 @@ def delete_resort_pin_by_id(delete_resort_id: str, user: str):
 
 
 @app.post("/resorts/{resort_id}/scrape", response_model=schemas.Resort, include_in_schema=False)
-def update_resort_by_id(resort_id: str):
+def update_resort_by_id(resort_id: str,  db: Session = Depends(get_db)):
     scrape_resort(resort_id)
     return db.query(Resort).filter_by(id=resort_id).one()
 
 
 @app.get("/resorts/{resort_id}", response_model=schemas.Resort)
-def get_resort_by_id(resort_id: str):
+def get_resort_by_id(resort_id: str,  db: Session = Depends(get_db)):
     return db.query(Resort).filter_by(id=resort_id).one()
 
 
 @app.get("/resorts/{resort_id}/lifts", response_model=List[schemas.Lift])
-def get_lifts_by_resort(resort_id: str):
+def get_lifts_by_resort(resort_id: str,  db: Session = Depends(get_db)):
     return db.query(Lift).filter_by(resort_id=resort_id).order_by(
         Lift.is_open.desc(), Lift.name.asc()
     ).all()
 
 
 @app.get("/resorts/{resort_id}/trails", response_model=List[schemas.Trail])
-def get_trails_by_resort(resort_id: str):
+def get_trails_by_resort(resort_id: str,  db: Session = Depends(get_db)):
     return db.query(Trail).filter_by(resort_id=resort_id).order_by(
         Trail.rating.asc(), Trail.is_open.desc(), Trail.name.asc()
     ).all()
