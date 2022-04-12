@@ -60,3 +60,8 @@ class UserResorts(BaseModel):
     resort_id: str
     user_id: str
     created_at: datetime
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str

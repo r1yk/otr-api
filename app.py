@@ -1,10 +1,14 @@
+from datetime import datetime, timedelta
 from typing import List, Optional, Union
 
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
+
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, nulls_last
 
+from lib.auth import OTRAuth, JWT
 from lib.postgres import get_session
 from lib.models import Lift, Resort, Trail, UserResort
 import lib.schemas as schemas
@@ -39,6 +43,19 @@ app.add_middleware(
     allow_headers=["*"],
     allow_methods=["GET", "POST", "DELETE"]
 )
+
+
+@app.post("/login", response_model=schemas.Token)
+async def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
+    user_email = form_data.username
+    password = form_data.password
+    auth = OTRAuth(db)
+    user = auth.authenticate_user(user_email, password)
+    token = JWT.create_token({
+        'sub': user.id,
+        'exp': (datetime.utcnow() + timedelta(minutes=30)).timestamp()
+    })
+    return {'access_token': token, 'token_type': 'bearer'}
 
 
 @app.get("/resorts", response_model=Union[List[schemas.ResortWithUser], List[schemas.Resort]])

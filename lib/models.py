@@ -62,6 +62,7 @@ class User(Base):
     email = Column(String)
     email_verified = Column(Boolean)
     created_at = Column(DateTime)
+    hashed_password = Column(String)
 
 
 class UserResort(Base):
