@@ -69,3 +69,13 @@ def get_session(db_name: str = DATABASE) -> Session:
         session_factory = sessionmaker(get_engine(db_name))
 
     return session_factory()
+
+
+async def get_api_db() -> Session:
+    """Return a database session suitable for authenticated API requests,
+    and close the session after serving the request."""
+    db = get_session()
+    try:
+        yield db
+    finally:
+        db.close()
