@@ -49,19 +49,20 @@ class JWT:
 
     @classmethod
     def decode_token(cls, token: str) -> dict:
-        """Encode the payload, and sign with the secret key."""
+        """Decode the payload, and confirm that it was signed with the secret key."""
         components = token.split('.')
-        message = '.'.join(components[0:2])
-        payload = components[1]
-        signature = components[2]
-        if JWT.verify_signature(message, signature):
-            payload_decoded = json.loads(JWT.base64_decode(payload))
-            expiration = payload_decoded['exp']
-            if datetime.fromtimestamp(expiration) < datetime.utcnow():
-                print('token expired')
-                raise HTTPException(status.HTTP_401_UNAUTHORIZED)
+        if len(components) == 3:
+            message = '.'.join(components[0:2])
+            payload = components[1]
+            signature = components[2]
+            if JWT.verify_signature(message, signature):
+                payload_decoded = json.loads(JWT.base64_decode(payload))
+                expiration = payload_decoded['exp']
+                if datetime.fromtimestamp(expiration) < datetime.utcnow():
+                    print('token expired')
+                    raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
-            return payload_decoded
+                return payload_decoded
 
         raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
