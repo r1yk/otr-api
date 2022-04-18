@@ -14,6 +14,7 @@ from lib.models import User
 # to get a string like this run:
 # openssl rand -hex 32
 SECRET_KEY = "mydumbsecret"
+WEB_APP_SECRET = "webappsecret"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 HASH_METHOD = 'sha256'
@@ -25,37 +26,36 @@ class JWT:
         "typ": "JWT"
     }
 
-    @classmethod
-    def create_token(cls, payload: dict) -> str:
+    def __init__(self, secret=None):
+        self.secret = secret or SECRET_KEY
+
+    def create_token(self, payload: dict) -> str:
         """Encode the headers + payload, and sign with the secret key."""
         encoded_headers = JWT.base64_encode(json.dumps(JWT.headers).encode())
         encoded_payload = JWT.base64_encode(json.dumps(payload).encode())
         to_sign = f"{encoded_headers.decode()}.{encoded_payload.decode()}"
-        signature = JWT.get_signature(to_sign)
+        signature = self.get_signature(to_sign)
         return f"{to_sign}.{signature}"
 
-    @classmethod
-    def get_signature(cls, message: str) -> str:
+    def get_signature(self, message: str) -> str:
         hs256 = hmac.new(
-            key=SECRET_KEY.encode(),
+            key=self.secret.encode(),
             msg=message.encode(),
             digestmod=HASH_METHOD
         )
         return JWT.base64_encode(hs256.digest()).decode()
 
-    @classmethod
-    def verify_signature(cls, message: str, signature: str) -> bool:
-        return JWT.get_signature(message) == signature
+    def verify_signature(self, message: str, signature: str) -> bool:
+        return self.get_signature(message) == signature
 
-    @classmethod
-    def decode_token(cls, token: str) -> dict:
+    def decode_token(self, token: str) -> dict:
         """Decode the payload, and confirm that it was signed with the secret key."""
         components = token.split('.')
         if len(components) == 3:
             message = '.'.join(components[0:2])
             payload = components[1]
             signature = components[2]
-            if JWT.verify_signature(message, signature):
+            if self.verify_signature(message, signature):
                 payload_decoded = json.loads(JWT.base64_decode(payload))
                 expiration = payload_decoded['exp']
                 if datetime.fromtimestamp(expiration) < datetime.utcnow():

@@ -40,7 +40,8 @@ async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequ
     user_email = form_data.username
     password = form_data.password
     user = OTRAuth(db).authenticate_user(user_email, password)
-    token = JWT.create_token({
+    new_jwt = JWT()
+    token = new_jwt.create_token({
         'sub': user.id,
         'exp': (datetime.utcnow() + timedelta(minutes=30)).timestamp()
     })

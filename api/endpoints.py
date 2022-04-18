@@ -19,7 +19,8 @@ def authorize(request: Request, authorization: str | None = Header(None)):
     split = authorization.split('Bearer ')
     if len(split) == 2:
         token = split[1]
-        message = JWT.decode_token(token)
+        jwt = JWT()
+        message = jwt.decode_token(token)
         request.state.user_id = message['sub']
         return message
 
