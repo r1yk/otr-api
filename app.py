@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from dotenv import dotenv_values
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,6 +12,8 @@ from api.endpoints import router
 from lib.auth import OTRAuth, JWT
 from lib.postgres import get_api_db
 import lib.schemas as schemas
+
+config = dotenv_values()
 
 app = FastAPI()
 app.include_router(router)
@@ -43,6 +47,8 @@ async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequ
     new_jwt = JWT()
     token = new_jwt.create_token({
         'sub': user.id,
-        'exp': (datetime.utcnow() + timedelta(minutes=30)).timestamp()
+        'exp': round((datetime.utcnow() + timedelta(
+            seconds=int(config.get('TOKEN_EXP_SECONDS', 3600))
+        )).timestamp())
     })
     return {'access_token': token, 'token_type': 'bearer'}
