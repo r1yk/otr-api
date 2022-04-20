@@ -98,30 +98,37 @@ class OTRAuth:
         """Get the specified user from the database and make sure the hashed passwords match."""
         user = self.get_user(user_id)
         if not user:
-            self.return_401()
+            self.return_status(401)
 
         hashed_password = hashlib.new(
             HASH_METHOD, password.encode()).hexdigest()
         if hashed_password == user.hashed_password:
             return user
 
-        self.return_401()
+        self.return_status(401)
 
     def get_user(self, user_id) -> User:
         """Return the requested user in the database, if it exists."""
         try:
             return self.db.query(User).filter_by(email=user_id).one()
         except NoResultFound:
-            self.return_401()
+            self.return_status(401)
 
     @classmethod
     def create_token(cls, data: dict) -> str:
         """Encode and cryptographically sign the data to create a new JWT."""
 
     @classmethod
-    def return_401(cls):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    def return_status(cls, status: int, detail: str = None, headers: dict = None) -> None:
+        if status == 401:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=detail or "Incorrect username or password",
+                headers=headers or {"WWW-Authenticate": "Bearer"},
+            )
+
+        elif status == 403:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=detail or "Your client does not have access to this resource."
+            )
