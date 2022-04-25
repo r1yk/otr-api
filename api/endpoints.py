@@ -12,13 +12,16 @@ import lib.schemas as schemas
 from webscraper import scrape_resort
 
 
-def authorize_web_app(request: Request, web_authorization: str | None = Header(None)):
+async def authorize_new_user(request: Request, authorization: str | None = Header(None)):
     """
-    Handle requests that can only be made on behalf of the web application (like user creation).
-    Make sure the `web-authorization` header is present, and that the token was signed
-    with the web application secret.
+    Handle requests to create new users. This can only be done by the web application.
+    Make sure the `Authorization` header is present, and that the token was signed
+    by the web application.
     """
-    return _authorize(request, web_authorization, WEB_APP_SECRET)
+    payload = await request.json()
+    secret = f"otr-verify:{payload.get('email')}@{payload.get('password')}"
+
+    return _authorize(request, authorization, secret)
 
 
 def authorize(request: Request, authorization: str | None = Header(None)):

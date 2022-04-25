@@ -1,5 +1,5 @@
 from base64 import urlsafe_b64encode, urlsafe_b64decode
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import hmac
 import json
@@ -58,7 +58,7 @@ class JWT:
             if self.verify_signature(message, signature):
                 payload_decoded = json.loads(JWT.base64_decode(payload))
                 expiration = payload_decoded['exp']
-                if datetime.fromtimestamp(expiration) < datetime.utcnow():
+                if datetime.fromtimestamp(expiration, tz=timezone.utc) < datetime.now(tz=timezone.utc):
                     print('token expired')
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
@@ -119,16 +119,16 @@ class OTRAuth:
         """Encode and cryptographically sign the data to create a new JWT."""
 
     @classmethod
-    def return_status(cls, status: int, detail: str = None, headers: dict = None) -> None:
-        if status == 401:
+    def return_status(cls, status_code: int, detail: str = None, headers: dict = None) -> None:
+        if status_code == 401:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
+                status_code=status_code,
                 detail=detail or "Incorrect username or password",
                 headers=headers or {"WWW-Authenticate": "Bearer"},
             )
 
-        elif status == 403:
+        elif status_code == 403:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status_code,
                 detail=detail or "Your client does not have access to this resource."
             )

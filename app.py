@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import hashlib
 
 from dotenv import dotenv_values
 
@@ -6,10 +7,13 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
+from nanoid import generate as generate_id
+
 from sqlalchemy.orm import Session
 
-from api.endpoints import router
-from lib.auth import OTRAuth, JWT
+from api.endpoints import authorize_new_user, router
+from lib.auth import OTRAuth, JWT, HASH_METHOD
+from lib.models import User
 from lib.postgres import get_api_db
 import lib.schemas as schemas
 
@@ -39,6 +43,23 @@ app.add_middleware(
 )
 
 
+@app.post("/users", dependencies=[Depends(authorize_new_user)], response_model=schemas.User)
+async def create_user(new_user: schemas.NewUserRequest, db: Session = Depends(get_api_db)):
+    hashed_password = hashlib.new(
+        HASH_METHOD, new_user.password.encode()
+    ).hexdigest()
+    db.add(
+        User(
+            id=generate_id(),
+            created_at=datetime.utcnow(),
+            email=new_user.email,
+            email_verified=False,
+            hashed_password=hashed_password
+        )
+    )
+    db.commit()
+
+
 @app.post("/login", response_model=schemas.Token)
 async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequestForm = Depends()):
     user_email = form_data.username
@@ -47,7 +68,7 @@ async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequ
     new_jwt = JWT()
     token = new_jwt.create_token({
         'sub': user.id,
-        'exp': round((datetime.utcnow() + timedelta(
+        'exp': round((datetime.now(tz=timezone.utc) + timedelta(
             seconds=int(config.get('TOKEN_EXP_SECONDS', 3600))
         )).timestamp())
     })

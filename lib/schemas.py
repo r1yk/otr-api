@@ -8,6 +8,11 @@ class BaseModel(PydanticBase):
         orm_mode = True
 
 
+class NewUserRequest(BaseModel):
+    email: str
+    password: str
+
+
 class User(BaseModel):
     id: str
     email: str
