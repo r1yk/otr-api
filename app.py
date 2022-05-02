@@ -3,7 +3,7 @@ import hashlib
 
 from dotenv import dotenv_values
 
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -61,7 +61,10 @@ async def create_user(new_user: schemas.NewUserRequest, db: Session = Depends(ge
 
 
 @app.post("/login", response_model=schemas.Token)
-async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+        response: Response,
+        db: Session = Depends(get_api_db),
+        form_data: OAuth2PasswordRequestForm = Depends()):
     user_email = form_data.username
     password = form_data.password
     user = OTRAuth(db).authenticate_user(user_email, password)
@@ -72,4 +75,5 @@ async def login(db: Session = Depends(get_api_db), form_data: OAuth2PasswordRequ
             seconds=int(config.get('TOKEN_EXP_SECONDS', 3600))
         )).timestamp())
     })
+    response.headers['Set-Cookie'] = f'otr_auth={token}; HttpOnly; Max-Age=3600'
     return {'access_token': token, 'token_type': 'bearer'}

@@ -24,9 +24,9 @@ async def authorize_new_user(request: Request, authorization: str | None = Heade
     return _authorize(request, authorization, secret)
 
 
-def authorize(request: Request, authorization: str | None = Header(None)):
+def authorize(request: Request, cookie: str | None = Header(None)):
     """Handle requests made on behalf of individual users."""
-    return _authorize(request, authorization, SECRET_KEY)
+    return _authorize(request, cookie, SECRET_KEY)
 
 
 def _authorize(request: Request, bearer_token, secret: str = SECRET_KEY):
@@ -36,7 +36,7 @@ def _authorize(request: Request, bearer_token, secret: str = SECRET_KEY):
     if not bearer_token:
         OTRAuth.return_status(401)
 
-    components = bearer_token.split('Bearer ')
+    components = bearer_token.split('otr_auth=')
     if len(components) == 2:
         token = components[1]
         jwt = JWT(secret)
