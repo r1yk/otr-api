@@ -10,6 +10,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from nanoid import generate as generate_id
 
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 
 from api.endpoints import authorize_new_user, router
 from lib.auth import OTRAuth, JWT, HASH_METHOD
@@ -48,16 +49,20 @@ async def create_user(new_user: schemas.NewUserRequest, db: Session = Depends(ge
     hashed_password = hashlib.new(
         HASH_METHOD, new_user.password.encode()
     ).hexdigest()
-    db.add(
-        User(
-            id=generate_id(),
-            created_at=datetime.utcnow(),
-            email=new_user.email,
-            email_verified=False,
-            hashed_password=hashed_password
+    try:
+        db.add(
+            User(
+                id=generate_id(),
+                created_at=datetime.utcnow(),
+                email=new_user.email,
+                email_verified=False,
+                hashed_password=hashed_password
+            )
         )
-    )
-    db.commit()
+        db.commit()
+
+    except IntegrityError:
+        OTRAuth.return_status(400, detail='Email address already registered')
 
 
 @app.post("/login", response_model=schemas.Token)

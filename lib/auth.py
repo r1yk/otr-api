@@ -120,6 +120,12 @@ class OTRAuth:
 
     @classmethod
     def return_status(cls, status_code: int, detail: str = None, headers: dict = None) -> None:
+        if status_code == 400:
+            raise HTTPException(
+                status_code=status_code,
+                detail=detail or 'Invalid request'
+            )
+
         if status_code == 401:
             raise HTTPException(
                 status_code=status_code,

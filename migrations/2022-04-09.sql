@@ -1,7 +1,7 @@
 -- Create a users table.
 CREATE TABLE users (
     id varchar PRIMARY KEY,
-    email varchar NOT NULL,
+    email varchar UNIQUE NOT NULL,
     email_verified boolean NOT NULL,
     created_at timestamp NOT NULL,
     hashed_password varchar
