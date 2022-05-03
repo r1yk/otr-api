@@ -1,6 +1,6 @@
 from typing import List, Union
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import and_, nulls_last
 from sqlalchemy.orm import Session
@@ -18,25 +18,25 @@ async def authorize_new_user(request: Request, authorization: str | None = Heade
     Make sure the `Authorization` header is present, and that the token was signed
     by the web application.
     """
+    print(authorization)
     payload = await request.json()
     secret = f"otr-verify:{payload.get('email')}@{payload.get('password')}"
-
-    return _authorize(request, authorization, secret)
+    return _authorize(request, authorization, secret, split_on='Bearer ')
 
 
 def authorize(request: Request, cookie: str | None = Header(None)):
     """Handle requests made on behalf of individual users."""
-    return _authorize(request, cookie, SECRET_KEY)
+    return _authorize(request, cookie, secret=SECRET_KEY)
 
 
-def _authorize(request: Request, bearer_token, secret: str = SECRET_KEY):
+def _authorize(request: Request, bearer_token, secret: str = SECRET_KEY, split_on='otr_auth='):
     """
     Verify that a given bearer token is both unexpired and signed with a given secret. 
     """
     if not bearer_token:
         OTRAuth.return_status(401)
 
-    components = bearer_token.split('otr_auth=')
+    components = bearer_token.split(split_on)
     if len(components) == 2:
         token = components[1]
         jwt = JWT(secret)
@@ -56,6 +56,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 router = APIRouter(
     dependencies=[Depends(oauth2_scheme), Depends(authorize)]
 )
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    response.headers['Set-Cookie'] = f'otr_auth=null; HttpOnly'
+    return {'access_token': None, 'token_type': 'bearer'}
 
 
 @router.get("/resorts", response_model=Union[List[schemas.ResortWithUser], List[schemas.Resort]])
