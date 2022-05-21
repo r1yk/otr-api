@@ -18,15 +18,19 @@ async def authorize_new_user(request: Request, authorization: str | None = Heade
     Make sure the `Authorization` header is present, and that the token was signed
     by the web application.
     """
-    print(authorization)
     payload = await request.json()
     secret = f"otr-verify:{payload.get('email')}@{payload.get('password')}"
     return _authorize(request, authorization, secret, split_on='Bearer ')
 
 
-def authorize(request: Request, cookie: str | None = Header(None)):
+def authorize(
+        request: Request,
+        authorization: str | None = Header(None),
+        cookie: str | None = Header(None)):
     """Handle requests made on behalf of individual users."""
-    return _authorize(request, cookie, secret=SECRET_KEY)
+    token_header = cookie or authorization
+    split_on = 'otr_auth=' if cookie else 'Bearer '
+    return _authorize(request, token_header, secret=SECRET_KEY, split_on=split_on)
 
 
 def _authorize(request: Request, bearer_token, secret: str = SECRET_KEY, split_on='otr_auth='):
