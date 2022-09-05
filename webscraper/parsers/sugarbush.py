@@ -1,6 +1,6 @@
 # pylint: disable=broad-except
 """
-Sugarbush Resort
+Webscraper for Sugarbush Resort
 """
 from typing import List
 

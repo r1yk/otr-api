@@ -1,3 +1,6 @@
+"""
+Saskadena Six webscraper
+"""
 from typing import List, Optional
 
 from selenium.webdriver.common.by import By
@@ -7,6 +10,10 @@ from webscraper import Parser, Rating
 
 
 class SaskadenaSix(Parser):
+    """
+    Parser for the Saskadena Six trail report
+    """
+
     trail_type_to_rating: dict = {
         "Easy": Rating.GREEN.value,
         "Intermediate": Rating.BLUE.value,
@@ -18,7 +25,7 @@ class SaskadenaSix(Parser):
         self._lifts_and_trails = None
         super().__init__(browser)
 
-    def get_lift_elements(self, peak: Optional[WebElement] = None) -> List[WebElement]:
+    def get_lift_elements(self, _: Optional[WebElement] = None) -> List[WebElement]:
         return self.get_lifts_and_trails().get("lifts")
 
     def get_lift_name(self, lift: WebElement) -> str:
@@ -29,13 +36,13 @@ class SaskadenaSix(Parser):
         status_element = lift.find_element(By.CLASS_NAME, "field--name-field-status")
         return status_element.text
 
-    def get_trail_elements(
-        self, trail_section: Optional[WebElement] = None
-    ) -> List[WebElement]:
+    def get_trail_elements(self, _: Optional[WebElement] = None) -> List[WebElement]:
         return self.get_lifts_and_trails().get("trails")
 
     def get_lifts_and_trails(self) -> List[WebElement]:
-        # Saskadena Six lumps trails and lifts together and makes it tough to distinguish them :(
+        """
+        Saskadena Six lumps trails and lifts together and makes it tough to distinguish them :(
+        """
         trail_elements = []
         lift_elements = []
         if self._lifts_and_trails is None:

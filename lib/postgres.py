@@ -1,3 +1,4 @@
+# pylint: disable=all
 """Provide access to the SQL backend."""
 
 from os import getenv

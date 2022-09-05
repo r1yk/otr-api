@@ -1,3 +1,7 @@
+"""
+Burke Mountain webscraper
+"""
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -5,6 +9,10 @@ from webscraper import Parser, Rating
 
 
 class BurkeMountain(Parser):
+    """
+    Parser for the Burke Mountain trail report
+    """
+
     lift_css_selector = "div#lifts > table > tbody > tr"
     trail_css_selector = "div#trails > table > tbody > tr"
 

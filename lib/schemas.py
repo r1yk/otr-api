@@ -1,19 +1,39 @@
+"""
+Schema objects to be used with FastAPI + Pydantic
+"""
 from datetime import datetime, date
 from typing import Union, Optional
-from pydantic import BaseModel as PydanticBase
+from pydantic import BaseModel as PydanticBase  # pylint: disable=no-name-in-module
 
 
 class BaseModel(PydanticBase):
+    """
+    Base model inherited by all schema objects
+    """
+
     class Config:
+        """
+        This wires up SQLAlchemy + FastAPI, such that functions serving API endpoints
+        can just return the result of a SQLAlchemy query.
+        """
+
         orm_mode = True
 
 
 class NewUserRequest(BaseModel):
+    """
+    A JSON payload that represents a newly created user
+    """
+
     email: str
     password: str
 
 
 class User(BaseModel):
+    """
+    A user of the web application
+    """
+
     id: str
     email: str
     email_verified: bool
@@ -21,6 +41,10 @@ class User(BaseModel):
 
 
 class Resort(BaseModel):
+    """
+    A ski resort
+    """
+
     id: str
     city: str
     name: str
@@ -34,10 +58,18 @@ class Resort(BaseModel):
 
 
 class ResortWithUser(Resort):
+    """
+    A ski resort that also has a user_id?
+    """
+
     user_id: Union[str, None]
 
 
 class Lift(BaseModel):
+    """
+    A chairlift at a ski resort
+    """
+
     id: str
     name: str
     status: str
@@ -48,6 +80,10 @@ class Lift(BaseModel):
 
 
 class Trail(BaseModel):
+    """
+    A trail at a ski resort
+    """
+
     id: str
     name: str
     rating: Optional[int]
@@ -61,6 +97,10 @@ class Trail(BaseModel):
 
 
 class UserResorts(BaseModel):
+    """
+    A resort that is currently pinned by a particular user
+    """
+
     id: str
     resort_id: str
     user_id: str
@@ -68,6 +108,10 @@ class UserResorts(BaseModel):
 
 
 class Token(BaseModel):
+    """
+    A JWT
+    """
+
     access_token: str
     token_type: str
     expires_at: int

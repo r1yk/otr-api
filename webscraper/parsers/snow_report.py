@@ -1,3 +1,9 @@
+"""
+Webscraper for a common UI setup shared by a few mountains, like:
+    Bolton Valley
+    Jay Peak
+    possibly others?
+"""
 from typing import List
 
 from selenium.webdriver.common.by import By
@@ -50,6 +56,10 @@ class SnowReportCSS(Parser):
 
 
 class BoltonValley(SnowReportCSS):
+    """
+    Parser for the Bolton Valley trail report
+    """
+
     trail_type_to_rating: dict = {
         "EASIER": Rating.GREEN.value,
         "MODERATE": Rating.BLUE.value,
@@ -60,6 +70,10 @@ class BoltonValley(SnowReportCSS):
 
 
 class JayPeak(SnowReportCSS):
+    """
+    Parser for the Jay Peak trail report
+    """
+
     trail_type_to_rating: dict = {
         "BEGINNER": Rating.GREEN.value,
         "INTERMEDIATE": Rating.BLUE.value,
@@ -71,6 +85,10 @@ class JayPeak(SnowReportCSS):
 
 
 class BurkeMountain(Parser):
+    """
+    Parser for the Burke Mountain trail report
+    """
+
     lift_css_selector = "div#lifts > table > tbody > tr"
     trail_css_selector = "div#trails > table > tbody >tr"
 

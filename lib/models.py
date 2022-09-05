@@ -1,3 +1,6 @@
+"""
+Database models for use with SQLAlchemy
+"""
 from sqlalchemy import (
     Boolean,
     Column,
@@ -6,7 +9,6 @@ from sqlalchemy import (
     Integer,
     String,
     ForeignKey,
-    Table,
 )
 from sqlalchemy.orm import declarative_base
 
@@ -14,6 +16,10 @@ Base = declarative_base()
 
 
 class Lift(Base):
+    """
+    A lift at a ski resort
+    """
+
     __tablename__ = "lifts"
     id = Column(String, primary_key=True)
     resort_id = Column(ForeignKey("resorts.id"))
@@ -27,6 +33,10 @@ class Lift(Base):
 
 
 class Trail(Base):
+    """
+    A trail at a ski resort
+    """
+
     __tablename__ = "trails"
     id = Column(String, primary_key=True)
     resort_id = Column(ForeignKey("resorts.id"))
@@ -49,6 +59,10 @@ class Trail(Base):
 
 
 class Resort(Base):
+    """
+    A ski resort
+    """
+
     __tablename__ = "resorts"
     id = Column(String, primary_key=True)
     name = Column(String)
@@ -66,6 +80,10 @@ class Resort(Base):
 
 
 class User(Base):
+    """
+    A user of the web application
+    """
+
     __tablename__ = "users"
     id = Column(String, primary_key=True)
     email = Column(String)
@@ -75,6 +93,10 @@ class User(Base):
 
 
 class UserResort(Base):
+    """
+    A resort that is currently pinned by a particular user
+    """
+
     __tablename__ = "user_resorts"
     user_id = Column(ForeignKey("users.id"), primary_key=True)
     resort_id = Column(ForeignKey("resorts.id"), primary_key=True)

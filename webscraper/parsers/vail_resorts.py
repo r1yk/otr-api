@@ -1,3 +1,9 @@
+"""
+Webscraper for various Vail Resorts mountains, like:
+    Okemo
+    Mt. Snow
+    Stowe
+"""
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
@@ -5,6 +11,10 @@ from webscraper import Parser, Rating
 
 
 class Vail(Parser):
+    """
+    Parser for all known Vail Resorts trail reports so far.
+    """
+
     lift_css_selector = ".liftStatus__lifts__row"
     trail_css_selector = ".trailStatus__trails__row"
 
@@ -23,10 +33,13 @@ class Vail(Parser):
         return name_element.text
 
     def get_item_status(self, item: WebElement) -> str:
+        """
+        See if this item is open, or else return "Closed".
+        """
         try:
             item.find_element(By.CSS_SELECTOR, "div.icon-status-open")
             return "Open"
-        except:
+        except Exception as _:  # pylint: disable=broad-except
             return "Closed"
 
     def get_lift_status(self, lift: WebElement) -> str:
