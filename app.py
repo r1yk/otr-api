@@ -32,7 +32,7 @@ def home():
 origins = [
     "http://localhost:3000",
     "http://localhost:3080",
-    "https://opentrailreport.com"
+    "https://opentrailreport.com",
 ]
 
 app.add_middleware(
@@ -40,15 +40,17 @@ app.add_middleware(
     allow_origins=origins,
     allow_credentials=True,
     allow_headers=["*"],
-    allow_methods=["GET", "POST", "DELETE"]
+    allow_methods=["GET", "POST", "DELETE"],
 )
 
 
-@app.post("/users", dependencies=[Depends(authorize_new_user)], response_model=schemas.User)
-async def create_user(new_user: schemas.NewUserRequest, db: Session = Depends(get_api_db)):
-    hashed_password = hashlib.new(
-        HASH_METHOD, new_user.password.encode()
-    ).hexdigest()
+@app.post(
+    "/users", dependencies=[Depends(authorize_new_user)], response_model=schemas.User
+)
+async def create_user(
+    new_user: schemas.NewUserRequest, db: Session = Depends(get_api_db)
+):
+    hashed_password = hashlib.new(HASH_METHOD, new_user.password.encode()).hexdigest()
     try:
         db.add(
             User(
@@ -56,29 +58,31 @@ async def create_user(new_user: schemas.NewUserRequest, db: Session = Depends(ge
                 created_at=datetime.utcnow(),
                 email=new_user.email,
                 email_verified=False,
-                hashed_password=hashed_password
+                hashed_password=hashed_password,
             )
         )
         db.commit()
 
     except IntegrityError:
-        OTRAuth.return_status(400, detail='Email address already registered')
+        OTRAuth.return_status(400, detail="Email address already registered")
 
 
 @app.post("/login", response_model=schemas.Token)
 async def login(
-        response: Response,
-        db: Session = Depends(get_api_db),
-        form_data: OAuth2PasswordRequestForm = Depends()):
+    response: Response,
+    db: Session = Depends(get_api_db),
+    form_data: OAuth2PasswordRequestForm = Depends(),
+):
     user_email = form_data.username
     password = form_data.password
     user = OTRAuth(db).authenticate_user(user_email, password)
     new_jwt = JWT()
-    token = new_jwt.create_token({
-        'sub': user.id,
-        'exp': round((datetime.now(tz=timezone.utc) + timedelta(
-            seconds=int(config.get('TOKEN_EXP_SECONDS', 3600))
-        )).timestamp())
-    })
-    response.headers['Set-Cookie'] = f'otr_auth={token}; HttpOnly; Max-Age=3600'
-    return {'access_token': token, 'token_type': 'bearer'}
+    expires_at = round(
+        (
+            datetime.now(tz=timezone.utc)
+            + timedelta(seconds=int(config.get("TOKEN_EXP_SECONDS", 3600)))
+        ).timestamp()
+    )
+    token = new_jwt.create_token({"sub": user.id, "exp": expires_at})
+    response.headers["Set-Cookie"] = f"otr_auth={token}; HttpOnly; Max-Age=3600"
+    return {"access_token": token, "token_type": "bearer", "expires_at": expires_at}

@@ -10,11 +10,11 @@ from sqlalchemy.orm import sessionmaker, Session
 
 CONFIG = dotenv_values()
 
-HOST = CONFIG.get('PG_HOST', getenv('PG_HOST'))
-PORT = CONFIG.get('PG_PORT', 5432)
-DATABASE = CONFIG.get('DB_NAME',  getenv('DB_NAME'))
-USER = CONFIG.get('PG_USERNAME', getenv('PG_USERNAME'))
-PASSWORD = CONFIG.get('PG_PASSWORD', getenv('PG_PASSWORD'))
+HOST = CONFIG.get("PG_HOST", getenv("PG_HOST"))
+PORT = CONFIG.get("PG_PORT", 5432)
+DATABASE = CONFIG.get("DB_NAME", getenv("DB_NAME"))
+USER = CONFIG.get("PG_USERNAME", getenv("PG_USERNAME"))
+PASSWORD = CONFIG.get("PG_PASSWORD", getenv("PG_PASSWORD"))
 
 # Globals for managing DB connections
 engine = None
@@ -22,9 +22,9 @@ session_factory = None
 
 
 def get_ssl_context(
-    certfile: str = 'keys/client-cert.pem',
-    keyfile: str = 'keys/client-key.pem',
-    cafile: str = 'keys/server-ca.pem'
+    certfile: str = "keys/client-cert.pem",
+    keyfile: str = "keys/client-key.pem",
+    cafile: str = "keys/server-ca.pem",
 ) -> SSLContext:
     """Return the `SSLContext` for DB connections that require encryption."""
     ssl_context = SSLContext()
@@ -40,7 +40,7 @@ def get_connection() -> Connection:
         password=PASSWORD,
         host=HOST,
         database=DATABASE,
-        ssl_context=get_ssl_context()
+        ssl_context=get_ssl_context(),
     )
 
 
@@ -48,16 +48,18 @@ def get_engine(db_name: str) -> Engine:
     """Get the running instance of a SQLAlchemy `Engine`."""
     global engine
     if engine is None:
-        if getenv('OTR_CLOUD'):
+        if getenv("OTR_CLOUD"):
             engine = create_engine(
                 f"postgresql+pg8000://{USER}:{PASSWORD}@/{db_name}"
                 f"?unix_sock=/cloudsql/{getenv('CLOUDSQL_INSTANCE_ID')}/.s.PGSQL.5432",
-                echo=False)
+                echo=False,
+            )
         else:
             engine = create_engine(
                 f"postgresql+pg8000://{USER}:{PASSWORD}@{HOST}:{PORT}/{db_name}",
                 # creator=get_connection,
-                echo=False)
+                echo=False,
+            )
 
     return engine
 

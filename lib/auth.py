@@ -17,14 +17,11 @@ SECRET_KEY = "mydumbsecret"
 WEB_APP_SECRET = "webappsecret"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
-HASH_METHOD = 'sha256'
+HASH_METHOD = "sha256"
 
 
 class JWT:
-    headers = {
-        "alg": "HS256",
-        "typ": "JWT"
-    }
+    headers = {"alg": "HS256", "typ": "JWT"}
 
     def __init__(self, secret=None):
         self.secret = secret or SECRET_KEY
@@ -39,9 +36,7 @@ class JWT:
 
     def get_signature(self, message: str) -> str:
         hs256 = hmac.new(
-            key=self.secret.encode(),
-            msg=message.encode(),
-            digestmod=HASH_METHOD
+            key=self.secret.encode(), msg=message.encode(), digestmod=HASH_METHOD
         )
         return JWT.base64_encode(hs256.digest()).decode()
 
@@ -50,16 +45,18 @@ class JWT:
 
     def decode_token(self, token: str) -> dict:
         """Decode the payload, and confirm that it was signed with the secret key."""
-        components = token.split('.')
+        components = token.split(".")
         if len(components) == 3:
-            message = '.'.join(components[0:2])
+            message = ".".join(components[0:2])
             payload = components[1]
             signature = components[2]
             if self.verify_signature(message, signature):
                 payload_decoded = json.loads(JWT.base64_decode(payload))
-                expiration = payload_decoded['exp']
-                if datetime.fromtimestamp(expiration, tz=timezone.utc) < datetime.now(tz=timezone.utc):
-                    print('token expired')
+                expiration = payload_decoded["exp"]
+                if datetime.fromtimestamp(expiration, tz=timezone.utc) < datetime.now(
+                    tz=timezone.utc
+                ):
+                    print("token expired")
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
                 return payload_decoded
@@ -81,7 +78,7 @@ class JWT:
 
         padding_needed = 4 - (len(input) % 4)
         if padding_needed > 0:
-            input += (b"=" * padding_needed)
+            input += b"=" * padding_needed
 
         return urlsafe_b64decode(input)
 
@@ -100,8 +97,7 @@ class OTRAuth:
         if not user:
             self.return_status(401)
 
-        hashed_password = hashlib.new(
-            HASH_METHOD, password.encode()).hexdigest()
+        hashed_password = hashlib.new(HASH_METHOD, password.encode()).hexdigest()
         if hashed_password == user.hashed_password:
             return user
 
@@ -119,11 +115,12 @@ class OTRAuth:
         """Encode and cryptographically sign the data to create a new JWT."""
 
     @classmethod
-    def return_status(cls, status_code: int, detail: str = None, headers: dict = None) -> None:
+    def return_status(
+        cls, status_code: int, detail: str = None, headers: dict = None
+    ) -> None:
         if status_code == 400:
             raise HTTPException(
-                status_code=status_code,
-                detail=detail or 'Invalid request'
+                status_code=status_code, detail=detail or "Invalid request"
             )
 
         if status_code == 401:
@@ -136,5 +133,5 @@ class OTRAuth:
         elif status_code == 403:
             raise HTTPException(
                 status_code=status_code,
-                detail=detail or "Your client does not have access to this resource."
+                detail=detail or "Your client does not have access to this resource.",
             )

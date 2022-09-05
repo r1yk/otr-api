@@ -47,18 +47,19 @@ class Parser(Settable):
     def element_has_child(cls, element: WebElement, css_selector: str) -> bool:
         """Return `true` if a there is a match for a given `css_selector` within a given web element."""
         try:
-            element.find_element(
-                By.CSS_SELECTOR, css_selector)
+            element.find_element(By.CSS_SELECTOR, css_selector)
             return True
         except:
             return False
 
     def get_lift_elements(self) -> List[WebElement]:
         """Get the HTML elements containing all lift information."""
-        elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
-            By.CSS_SELECTOR, self.lift_css_selector
-        ))
-        print(f'{len(elements)} lifts')
+        elements = WebDriverWait(self.browser, timeout=10).until(
+            lambda browser: browser.find_elements(
+                By.CSS_SELECTOR, self.lift_css_selector
+            )
+        )
+        print(f"{len(elements)} lifts")
         return elements
 
     def get_lift_name(self, lift: WebElement) -> str:
@@ -67,27 +68,30 @@ class Parser(Settable):
     def get_lift_status(self, lift: WebElement) -> str:
         """Find the status of this lift within the HTML element."""
 
-    def get_lifts(self) -> List['Lift']:
+    def get_lifts(self) -> List["Lift"]:
         """Return `Lift` instances for each web element representing a lift."""
         lifts = []
         for lift_element in self.get_lift_elements():
             lift = Lift(
                 name=self.get_lift_name(lift_element),
                 unique_name=self.get_lift_name(lift_element),
-                status=self.get_lift_status(lift_element))
-            lift.is_open = lift.status.lower() == 'open'
+                status=self.get_lift_status(lift_element),
+            )
+            lift.is_open = lift.status.lower() == "open"
             lifts.append(lift)
         return lifts
 
     def get_trail_elements(self) -> List[WebElement]:
         """Return all web elements containing information about individual trails."""
-        elements = WebDriverWait(self.browser, timeout=10).until(lambda browser: browser.find_elements(
-            By.CSS_SELECTOR, self.trail_css_selector
-        ))
-        print(f'{len(elements)} trails')
+        elements = WebDriverWait(self.browser, timeout=10).until(
+            lambda browser: browser.find_elements(
+                By.CSS_SELECTOR, self.trail_css_selector
+            )
+        )
+        print(f"{len(elements)} trails")
         return elements
 
-    def get_trails(self) -> List['Trail']:
+    def get_trails(self) -> List["Trail"]:
         "Return `Trail` instances for each web element representing a trail."
         trails = []
         for trail_element in self.get_trail_elements():
@@ -97,9 +101,9 @@ class Parser(Settable):
                 status=self.get_trail_status(trail_element).lower(),
                 groomed=self.get_trail_groomed(trail_element),
                 night_skiing=self.get_trail_night_skiing(trail_element),
-                rating=self.get_trail_rating(trail_element)
+                rating=self.get_trail_rating(trail_element),
             )
-            trail.is_open = trail.status.lower() == 'open'
+            trail.is_open = trail.status.lower() == "open"
             trails.append(trail)
         return trails
 
@@ -134,7 +138,7 @@ class Webscraper:
 
     def add_or_update(self, db_rows: List, scraped_data: List, at: datetime) -> None:
         """Add this lift or trail to the DB if it doesn't exist, or update it if it does."""
-        name_lookup = get_key_value_pairs(db_rows, key='unique_name')
+        name_lookup = get_key_value_pairs(db_rows, key="unique_name")
         for scraped_item in scraped_data:
             item = name_lookup.get(scraped_item.unique_name)
             # If this item exists in the database, merge in any freshly-scraped data.
@@ -148,7 +152,7 @@ class Webscraper:
 
             # Otherwise add a new item to the database that's tied to this resort.
             else:
-                print('new item', scraped_item.name)
+                print("new item", scraped_item.name)
                 scraped_item.id = generate_id()
                 scraped_item.resort_id = self.resort.id
                 scraped_item.updated_at = at
@@ -156,42 +160,41 @@ class Webscraper:
 
     def get_parser(self) -> Parser:
         """Construct and return an instance of a `Parser` based on the `parser_name` column in the database."""
-        items = self.resort.parser_name.split('.')
+        items = self.resort.parser_name.split(".")
         module_name, class_name = items[0], items[1]
 
         # Import the file in `webscraper/parsers/` that contains the implementation of the parser
-        import_module(
-            f'webscraper.parsers.{module_name}')
+        import_module(f"webscraper.parsers.{module_name}")
 
         # Find the class definition within the imported module
         ParserClass: Type[Parser] = getattr(
-            sys.modules[f'webscraper.parsers.{module_name}'], class_name
+            sys.modules[f"webscraper.parsers.{module_name}"], class_name
         )
 
         # Return an initialized `Parser` that can access the browser
         return ParserClass(self.browser)
 
-    def get_lifts(self) -> List['Lift']:
+    def get_lifts(self) -> List["Lift"]:
         """Return a `Lift` for each row in the `lifts` table that belongs to this resort."""
-        return self.db_session.execute(select(Lift).where(
-            Lift.resort_id == self.resort.id
-        )).scalars()
+        return self.db_session.execute(
+            select(Lift).where(Lift.resort_id == self.resort.id)
+        ).scalars()
 
-    def get_trails(self) -> List['Trail']:
+    def get_trails(self) -> List["Trail"]:
         """Return a `Trail` for each row in the `lifts` table that belongs to this resort."""
-        return self.db_session.execute(select(Trail).where(
-            Trail.resort_id == self.resort.id
-        )).scalars()
+        return self.db_session.execute(
+            select(Trail).where(Trail.resort_id == self.resort.id)
+        ).scalars()
 
     def scrape_trail_report(self):
         """Trigger the end-to-end webscraping session."""
-        print('\n', f'scraping {self.resort.name}...')
+        print("\n", f"scraping {self.resort.name}...")
         try:
             now = datetime.now()
             self.browser.get(self.resort.trail_report_url)
-            print('Loaded', self.resort.trail_report_url)
+            print("Loaded", self.resort.trail_report_url)
             if self.resort.additional_wait_seconds:
-                print('Additional wait: ', self.resort.additional_wait_seconds)
+                print("Additional wait: ", self.resort.additional_wait_seconds)
                 sleep(self.resort.additional_wait_seconds)
 
             parser = self.get_parser()
@@ -203,12 +206,10 @@ class Webscraper:
             self.add_or_update(db_trails, scraped_trails, now)
 
             self.resort.total_lifts = len(scraped_lifts)
-            self.resort.open_lifts = len(
-                [l for l in scraped_lifts if l.is_open])
+            self.resort.open_lifts = len([l for l in scraped_lifts if l.is_open])
 
             self.resort.total_trails = len(scraped_trails)
-            self.resort.open_trails = len(
-                [t for t in scraped_trails if t.is_open])
+            self.resort.open_trails = len([t for t in scraped_trails if t.is_open])
             self.resort.updated_at = now
 
         except Exception as e:
@@ -216,8 +217,8 @@ class Webscraper:
 
     def examine_changes(self, item, changes: dict, at: datetime) -> None:
         """Handle additional actions to be taken when specific columns are updated."""
-        print('UPDATE: ', item.name, changes)
-        is_open_change: Union[Tuple, None] = changes.get('is_open')
+        print("UPDATE: ", item.name, changes)
+        is_open_change: Union[Tuple, None] = changes.get("is_open")
         if is_open_change:
             open = is_open_change[1]
             if open:
@@ -233,8 +234,8 @@ def get_browser(options: Optional[List[str]] = None) -> WebDriver:
         for option in options:
             chrome_options.add_argument(option)
 
-    if dotenv_values().get('MODE') == 'headless':
-        chrome_options.add_argument('--headless')
+    if dotenv_values().get("MODE") == "headless":
+        chrome_options.add_argument("--headless")
 
     return Chrome(options=chrome_options)
 
@@ -256,7 +257,7 @@ def scrape_resorts(query: Optional[Query] = None) -> None:
     resort_query = query or select(Resort).where(
         or_(
             Resort.updated_at == None,
-            Resort.updated_at < datetime.utcnow() - timedelta(minutes=10)
+            Resort.updated_at < datetime.utcnow() - timedelta(minutes=10),
         )
     )
 

@@ -1,13 +1,22 @@
-from sqlalchemy import Boolean, Column, Date, DateTime, Integer, String, ForeignKey, Table
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    String,
+    ForeignKey,
+    Table,
+)
+from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
 
 
 class Lift(Base):
-    __tablename__ = 'lifts'
+    __tablename__ = "lifts"
     id = Column(String, primary_key=True)
-    resort_id = Column(ForeignKey('resorts.id'))
+    resort_id = Column(ForeignKey("resorts.id"))
     name = Column(String)
     unique_name = Column(String)
     status = Column(String)
@@ -18,9 +27,9 @@ class Lift(Base):
 
 
 class Trail(Base):
-    __tablename__ = 'trails'
+    __tablename__ = "trails"
     id = Column(String, primary_key=True)
-    resort_id = Column(ForeignKey('resorts.id'))
+    resort_id = Column(ForeignKey("resorts.id"))
     name = Column(String)
     unique_name = Column(String)
     trail_type = Column(String)
@@ -34,13 +43,13 @@ class Trail(Base):
     rating = Column(Integer)
 
     def __init__(self, *args, **kwargs):
-        if kwargs.get('name') and kwargs.get('trail_type'):
+        if kwargs.get("name") and kwargs.get("trail_type"):
             self.unique_name = f"{kwargs.get('name')}_{kwargs.get('trail_type')}"
         super().__init__(*args, **kwargs)
 
 
 class Resort(Base):
-    __tablename__ = 'resorts'
+    __tablename__ = "resorts"
     id = Column(String, primary_key=True)
     name = Column(String)
     parser_name = Column(String)
@@ -57,7 +66,7 @@ class Resort(Base):
 
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
     id = Column(String, primary_key=True)
     email = Column(String)
     email_verified = Column(Boolean)
@@ -66,6 +75,6 @@ class User(Base):
 
 
 class UserResort(Base):
-    __tablename__ = 'user_resorts'
-    user_id = Column(ForeignKey('users.id'), primary_key=True)
-    resort_id = Column(ForeignKey('resorts.id'), primary_key=True)
+    __tablename__ = "user_resorts"
+    user_id = Column(ForeignKey("users.id"), primary_key=True)
+    resort_id = Column(ForeignKey("resorts.id"), primary_key=True)
