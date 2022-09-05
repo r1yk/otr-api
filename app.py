@@ -1,3 +1,6 @@
+"""
+FastAPI root
+"""
 from datetime import datetime, timedelta, timezone
 import hashlib
 
@@ -26,6 +29,9 @@ app.include_router(router)
 
 @app.get("/")
 def home():
+    """
+    Root
+    """
     return "Hello from Open Trail Report"
 
 
@@ -48,11 +54,14 @@ app.add_middleware(
     "/users", dependencies=[Depends(authorize_new_user)], response_model=schemas.User
 )
 async def create_user(
-    new_user: schemas.NewUserRequest, db: Session = Depends(get_api_db)
+    new_user: schemas.NewUserRequest, db_session: Session = Depends(get_api_db)
 ):
+    """
+    Handle requests for new user registration
+    """
     hashed_password = hashlib.new(HASH_METHOD, new_user.password.encode()).hexdigest()
     try:
-        db.add(
+        db_session.add(
             User(
                 id=generate_id(),
                 created_at=datetime.utcnow(),
@@ -61,7 +70,7 @@ async def create_user(
                 hashed_password=hashed_password,
             )
         )
-        db.commit()
+        db_session.commit()
 
     except IntegrityError:
         OTRAuth.return_status(400, detail="Email address already registered")
@@ -70,12 +79,15 @@ async def create_user(
 @app.post("/login", response_model=schemas.Token)
 async def login(
     response: Response,
-    db: Session = Depends(get_api_db),
+    db_session: Session = Depends(get_api_db),
     form_data: OAuth2PasswordRequestForm = Depends(),
 ):
+    """
+    Handle requests to login. Issue a new JWT upon success.
+    """
     user_email = form_data.username
     password = form_data.password
-    user = OTRAuth(db).authenticate_user(user_email, password)
+    user = OTRAuth(db_session).authenticate_user(user_email, password)
     new_jwt = JWT()
     expires_at = round(
         (

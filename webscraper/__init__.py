@@ -1,3 +1,7 @@
+# pylint: disable=broad-except
+"""
+Webscraper
+"""
 from datetime import datetime, timedelta
 from enum import Enum
 from importlib import import_module
@@ -11,19 +15,21 @@ from nanoid import generate as generate_id
 from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.webdriver import WebDriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.remote.webelement import WebElement
-from selenium.webdriver.support.ui import WebDriverWait
 from sqlalchemy import select, or_
 from sqlalchemy.orm import Query
 from sqlalchemy.orm.session import Session
 
 from lib.models import Resort, Lift, Trail
 from lib.postgres import get_session
-from lib.util import get_key_value_pairs, get_changes, Settable
+from lib.util import get_key_value_pairs, get_changes
+from webscraper.parser import Parser
 
 
 class Rating(Enum):
+    """
+    Constant mapping from trail types -> integers.
+    """
+
     GREEN = 0
     BLUE = 1
     BLACK = 2
@@ -35,108 +41,19 @@ class Rating(Enum):
     TERRAIN_PARK = 8
 
 
-class Parser(Settable):
-    lift_css_selector = None
-    trail_css_selector = None
-    trail_type_to_rating: dict = {}
-
-    def __init__(self, browser: WebDriver):
-        self.browser = browser
-
-    @classmethod
-    def element_has_child(cls, element: WebElement, css_selector: str) -> bool:
-        """Return `true` if a there is a match for a given `css_selector` within a given web element."""
-        try:
-            element.find_element(By.CSS_SELECTOR, css_selector)
-            return True
-        except:
-            return False
-
-    def get_lift_elements(self) -> List[WebElement]:
-        """Get the HTML elements containing all lift information."""
-        elements = WebDriverWait(self.browser, timeout=10).until(
-            lambda browser: browser.find_elements(
-                By.CSS_SELECTOR, self.lift_css_selector
-            )
-        )
-        print(f"{len(elements)} lifts")
-        return elements
-
-    def get_lift_name(self, lift: WebElement) -> str:
-        """Find the name of this lift within the HTML element."""
-
-    def get_lift_status(self, lift: WebElement) -> str:
-        """Find the status of this lift within the HTML element."""
-
-    def get_lifts(self) -> List["Lift"]:
-        """Return `Lift` instances for each web element representing a lift."""
-        lifts = []
-        for lift_element in self.get_lift_elements():
-            lift = Lift(
-                name=self.get_lift_name(lift_element),
-                unique_name=self.get_lift_name(lift_element),
-                status=self.get_lift_status(lift_element),
-            )
-            lift.is_open = lift.status.lower() == "open"
-            lifts.append(lift)
-        return lifts
-
-    def get_trail_elements(self) -> List[WebElement]:
-        """Return all web elements containing information about individual trails."""
-        elements = WebDriverWait(self.browser, timeout=10).until(
-            lambda browser: browser.find_elements(
-                By.CSS_SELECTOR, self.trail_css_selector
-            )
-        )
-        print(f"{len(elements)} trails")
-        return elements
-
-    def get_trails(self) -> List["Trail"]:
-        "Return `Trail` instances for each web element representing a trail."
-        trails = []
-        for trail_element in self.get_trail_elements():
-            trail = Trail(
-                name=self.get_trail_name(trail_element),
-                trail_type=self.get_trail_type(trail_element),
-                status=self.get_trail_status(trail_element).lower(),
-                groomed=self.get_trail_groomed(trail_element),
-                night_skiing=self.get_trail_night_skiing(trail_element),
-                rating=self.get_trail_rating(trail_element),
-            )
-            trail.is_open = trail.status.lower() == "open"
-            trails.append(trail)
-        return trails
-
-    def get_trail_name(self, trail: WebElement) -> str:
-        """Find the name of this trail within the HTML element."""
-
-    def get_trail_type(self, trail: WebElement) -> str:
-        """Return either the difficulty or classification (i.e. "Terrain park" of this trail."""
-
-    def get_trail_status(self, trail: WebElement) -> str:
-        """Find the status of this trail within the HTML element (i.e. open, closed, partially open)."""
-
-    def get_trail_groomed(self, trail: WebElement) -> bool:
-        """Return whether or not this trail has groomed snow."""
-
-    def get_trail_night_skiing(self, trail: WebElement) -> bool:
-        """Return whether or not this trail has lighting for skiing after dark."""
-
-    def get_trail_rating(self, trail: WebElement) -> int:
-        """Get the trail type as described by the resort, and return the corresponding normalized `Rating` value."""
-        trail_type = self.get_trail_type(trail)
-        if trail_type:
-            return self.trail_type_to_rating.get(trail_type)
-        return None
-
-
 class Webscraper:
+    """
+    Webscraper
+    """
+
     def __init__(self, browser: WebDriver, resort: Resort):
         self.browser = browser
         self.resort = resort
         self.db_session: Session = Session.object_session(resort)
 
-    def add_or_update(self, db_rows: List, scraped_data: List, at: datetime) -> None:
+    def add_or_update(
+        self, db_rows: List, scraped_data: List, updated_at: datetime
+    ) -> None:
         """Add this lift or trail to the DB if it doesn't exist, or update it if it does."""
         name_lookup = get_key_value_pairs(db_rows, key="unique_name")
         for scraped_item in scraped_data:
@@ -147,19 +64,22 @@ class Webscraper:
                 self.db_session.merge(scraped_item)
                 changes = get_changes(item)
                 if changes:
-                    self.examine_changes(item, changes, at)
-                    item.updated_at = at
+                    self.examine_changes(item, changes, updated_at)
+                    item.updated_at = updated_at
 
             # Otherwise add a new item to the database that's tied to this resort.
             else:
                 print("new item", scraped_item.name)
                 scraped_item.id = generate_id()
                 scraped_item.resort_id = self.resort.id
-                scraped_item.updated_at = at
+                scraped_item.updated_at = updated_at
                 self.db_session.add(scraped_item)
 
     def get_parser(self) -> Parser:
-        """Construct and return an instance of a `Parser` based on the `parser_name` column in the database."""
+        """
+        Construct and return an instance of a `Parser` based on the
+        `parser_name` column in the database.
+        """
         items = self.resort.parser_name.split(".")
         module_name, class_name = items[0], items[1]
 
@@ -167,7 +87,7 @@ class Webscraper:
         import_module(f"webscraper.parsers.{module_name}")
 
         # Find the class definition within the imported module
-        ParserClass: Type[Parser] = getattr(
+        ParserClass: Type[Parser] = getattr(  # pylint: disable=invalid-name
             sys.modules[f"webscraper.parsers.{module_name}"], class_name
         )
 
@@ -212,19 +132,19 @@ class Webscraper:
             self.resort.open_trails = len([t for t in scraped_trails if t.is_open])
             self.resort.updated_at = now
 
-        except Exception as e:
-            print_exception(e)
+        except Exception as exception:
+            print_exception(exception)
 
-    def examine_changes(self, item, changes: dict, at: datetime) -> None:
+    def examine_changes(self, item, changes: dict, updated_at: datetime) -> None:
         """Handle additional actions to be taken when specific columns are updated."""
         print("UPDATE: ", item.name, changes)
         is_open_change: Union[Tuple, None] = changes.get("is_open")
         if is_open_change:
-            open = is_open_change[1]
-            if open:
-                item.last_opened_on = at.date()
+            is_open = is_open_change[1]
+            if is_open:
+                item.last_opened_on = updated_at.date()
             else:
-                item.last_closed_on = at.date()
+                item.last_closed_on = updated_at.date()
 
 
 def get_browser(options: Optional[List[str]] = None) -> WebDriver:
@@ -253,10 +173,13 @@ def scrape_resort(resort_id: str) -> None:
 
 
 def scrape_resorts(query: Optional[Query] = None) -> None:
-    """Carry out a webscrape for all resorts, or all resorts matching an optionally provided `Query`."""
+    """
+    Carry out a webscrape for all resorts, or all resorts
+    matching an optionally provided `Query`.
+    """
     resort_query = query or select(Resort).where(
         or_(
-            Resort.updated_at == None,
+            Resort.updated_at == None,  # pylint: disable=singleton-comparison
             Resort.updated_at < datetime.utcnow() - timedelta(minutes=10),
         )
     )

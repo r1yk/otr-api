@@ -1,16 +1,8 @@
+"""
+Utilities imported by whatever else
+"""
 from typing import List
 from sqlalchemy import inspect
-
-
-class Settable:
-    """
-    A simple mixin that assigns the values of any kwargs as class attributers.
-    """
-
-    def __init__(self, *args, **properties):
-        if properties:
-            for property in properties.keys():
-                setattr(self, property, properties.get(property))
 
 
 def get_key_value_pairs(

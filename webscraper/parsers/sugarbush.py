@@ -1,3 +1,7 @@
+# pylint: disable=broad-except
+"""
+Sugarbush Resort
+"""
 from typing import List
 
 from selenium.webdriver.common.by import By
@@ -7,6 +11,10 @@ from webscraper import Parser, Rating
 
 
 class Sugarbush(Parser):
+    """
+    Parser for the Sugarbush Resort trail report.
+    """
+
     lift_css_selector = "ul.Lifts_list__3PwcO > li"
     trail_css_selector = "ul.Trails_trailsList__3gYwp > li"
 
@@ -48,7 +56,7 @@ class Sugarbush(Parser):
                 if feature.text == "Grooming":
                     return True
             return False
-        except:
+        except Exception as _:
             return False
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
