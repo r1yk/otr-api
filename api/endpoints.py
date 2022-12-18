@@ -74,11 +74,13 @@ async def logout(response: Response):
 @router.get(
     "/resorts", response_model=Union[List[schemas.ResortWithUser], List[schemas.Resort]]
 )
-def get_resorts(user_id: str = Depends(get_user_id), db: Session = Depends(get_api_db)):
+def get_resorts(
+    user_id: str = Depends(get_user_id), db_session: Session = Depends(get_api_db)
+):
     if user_id:
         # Join resorts with user_resorts when a user id is provided.
         query = (
-            db.query(Resort, UserResort.user_id)
+            db_session.query(Resort, UserResort.user_id)
             .join(
                 UserResort,
                 and_(UserResort.resort_id == Resort.id, UserResort.user_id == user_id),
@@ -95,17 +97,17 @@ def get_resorts(user_id: str = Depends(get_user_id), db: Session = Depends(get_a
         ]
 
     # Return all resorts
-    return db.query(Resort).order_by(Resort.name.asc()).all()
+    return db_session.query(Resort).order_by(Resort.name.asc()).all()
 
 
 @router.post("/resorts/{resort_id}/pin")
 def pin_resort_by_id(
     resort_id: str,
     user_id: str = Depends(get_user_id),
-    db: Session = Depends(get_api_db),
+    db_session: Session = Depends(get_api_db),
 ):
-    db.add(UserResort(user_id=user_id, resort_id=resort_id))
-    db.commit()
+    db_session.add(UserResort(user_id=user_id, resort_id=resort_id))
+    db_session.commit()
     return {}
 
 
@@ -113,15 +115,15 @@ def pin_resort_by_id(
 def delete_resort_pin_by_id(
     delete_resort_id: str,
     user_id: str = Depends(get_user_id),
-    db: Session = Depends(get_api_db),
+    db_session: Session = Depends(get_api_db),
 ):
     user_resort = (
-        db.query(UserResort)
+        db_session.query(UserResort)
         .filter_by(resort_id=delete_resort_id, user_id=user_id)
         .one()
     )
-    db.delete(user_resort)
-    db.commit()
+    db_session.delete(user_resort)
+    db_session.commit()
     return {}
 
 
@@ -130,20 +132,20 @@ def delete_resort_pin_by_id(
     response_model=schemas.Resort,
     include_in_schema=False,
 )
-def update_resort_by_id(resort_id: str, db: Session = Depends(get_api_db)):
+def update_resort_by_id(resort_id: str, db_session: Session = Depends(get_api_db)):
     scrape_resort(resort_id)
-    return db.query(Resort).filter_by(id=resort_id).one()
+    return db_session.query(Resort).filter_by(id=resort_id).one()
 
 
 @router.get("/resorts/{resort_id}", response_model=schemas.Resort)
-def get_resort_by_id(resort_id: str, db: Session = Depends(get_api_db)):
-    return db.query(Resort).filter_by(id=resort_id).one()
+def get_resort_by_id(resort_id: str, db_session: Session = Depends(get_api_db)):
+    return db_session.query(Resort).filter_by(id=resort_id).one()
 
 
 @router.get("/resorts/{resort_id}/lifts", response_model=List[schemas.Lift])
-def get_lifts_by_resort(resort_id: str, db: Session = Depends(get_api_db)):
+def get_lifts_by_resort(resort_id: str, db_session: Session = Depends(get_api_db)):
     return (
-        db.query(Lift)
+        db_session.query(Lift)
         .filter_by(resort_id=resort_id)
         .order_by(Lift.is_open.desc(), Lift.name.asc())
         .all()
@@ -151,9 +153,9 @@ def get_lifts_by_resort(resort_id: str, db: Session = Depends(get_api_db)):
 
 
 @router.get("/resorts/{resort_id}/trails", response_model=List[schemas.Trail])
-def get_trails_by_resort(resort_id: str, db: Session = Depends(get_api_db)):
+def get_trails_by_resort(resort_id: str, db_session: Session = Depends(get_api_db)):
     return (
-        db.query(Trail)
+        db_session.query(Trail)
         .filter_by(resort_id=resort_id)
         .order_by(Trail.rating.asc(), Trail.is_open.desc(), Trail.name.asc())
         .all()
