@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from lib.models import Lift, Resort, Trail
 from lib.postgres import get_api_db
-import lib.schemas as schemas
+from lib import schemas
 
 
 router = APIRouter()
