@@ -27,6 +27,14 @@ class Parser:
     def __init__(self, browser: WebDriver):
         self.browser = browser
 
+    def display_trails(self) -> None:
+        """Take any action needed to render trails in the DOM (like opening a "trails" panel
+        or something)."""
+
+    def display_lifts(self) -> None:
+        """Take any action needed to render lifts in the DOM (like opening a "lifts" panel
+        or something)."""
+
     @classmethod
     def element_has_child(cls, element: WebElement, css_selector: str) -> bool:
         """Return `true` if a there is a match for a given `css_selector`
@@ -55,6 +63,7 @@ class Parser:
 
     def get_lifts(self) -> List["Lift"]:
         """Return `Lift` instances for each web element representing a lift."""
+        self.display_lifts()
         lifts = []
         for lift_element in self.get_lift_elements():
             lift = Lift(
@@ -78,6 +87,7 @@ class Parser:
 
     def get_trails(self) -> List["Trail"]:
         "Return `Trail` instances for each web element representing a trail."
+        self.display_trails()
         trails = []
         for trail_element in self.get_trail_elements():
             trail = Trail(
