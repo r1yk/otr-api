@@ -22,6 +22,7 @@ class Parser:
 
     lift_css_selector = None
     trail_css_selector = None
+    snow_report_css_selector = None
     trail_type_to_rating: dict = {}
 
     def __init__(self, browser: WebDriver):
@@ -132,3 +133,35 @@ class Parser:
         if trail_type:
             return self.trail_type_to_rating.get(trail_type)
         return None
+
+    def parse_snow_report(self) -> dict:
+        """
+        Get the WebElement containing the snow report, and mine it for any data
+        that can be found + returned as a dict.
+        """
+        snow_report = self.get_snow_report_element()
+        return {
+            "baseLayer": self.get_base_layer(snow_report),
+            "recentSnow": self.get_recent_snow(snow_report),
+            "seasonSnow": self.get_season_snow(snow_report),
+        }
+
+    def get_snow_report_element(self) -> WebElement:
+        """Get the HTML element that contains all snow information."""
+        element = WebDriverWait(self.browser, timeout=10).until(
+            lambda browser: browser.find_element(
+                By.CSS_SELECTOR, self.snow_report_css_selector
+            )
+        )
+        return element
+
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        """Return key-value pairs for everything that can be gleaned about the base depth."""
+
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        """Return key-value pairs that describe everything that can be gleaned
+        about recent snow accumulation in the report."""
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        """Return key-value pairs that describe everything that can be gleaned
+        about total snow accumulation in the report."""

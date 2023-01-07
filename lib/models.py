@@ -11,6 +11,7 @@ from sqlalchemy import (
     ForeignKey,
 )
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB
 
 Base = declarative_base()
 
@@ -77,6 +78,7 @@ class Resort(Base):
     open_lifts = Column(Integer)
     city = Column(String)
     state = Column(String)
+    snow_report = Column(JSONB)
 
 
 class User(Base):

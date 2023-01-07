@@ -50,6 +50,7 @@ class Webscraper:
         self.browser = browser
         self.resort = resort
         self.db_session: Session = Session.object_session(resort)
+        self.parser = self.get_parser()
 
     def add_or_update(
         self, db_rows: List, scraped_data: List, updated_at: datetime
@@ -117,10 +118,8 @@ class Webscraper:
                 print("Additional wait: ", self.resort.additional_wait_seconds)
                 sleep(self.resort.additional_wait_seconds)
 
-            parser = self.get_parser()
-
-            db_lifts, scraped_lifts = self.get_lifts(), parser.get_lifts()
-            db_trails, scraped_trails = self.get_trails(), parser.get_trails()
+            db_lifts, scraped_lifts = self.get_lifts(), self.parser.get_lifts()
+            db_trails, scraped_trails = self.get_trails(), self.parser.get_trails()
 
             self.add_or_update(db_lifts, scraped_lifts, now)
             self.add_or_update(db_trails, scraped_trails, now)
@@ -146,6 +145,27 @@ class Webscraper:
             else:
                 item.last_closed_on = updated_at.date()
 
+    def scrape_snow_report(self):
+        """
+        Scrape any/all information about the snow report.
+        """
+
+        try:
+            # If there's a different URL for the snow report, navigate to that first.
+            if (
+                self.resort.snow_report_url
+                and self.resort.snow_report_url != self.resort.trail_report_url
+            ):
+                self.browser.get(self.resort.snow_report_url)
+                if self.resort.additional_wait_seconds:
+                    print("Additional wait: ", self.resort.additional_wait_seconds)
+                    sleep(self.resort.additional_wait_seconds)
+
+            self.resort.snow_report = self.parser.parse_snow_report()
+
+        except Exception as exception:
+            print_exception(exception)
+
 
 def get_browser(options: Optional[List[str]] = None) -> WebDriver:
     """Return a running instance of (optionally headless) Google Chrome."""
@@ -167,6 +187,7 @@ def scrape_resort(resort_id: str) -> None:
         resort = session.get(Resort, resort_id)
         webscraper = Webscraper(browser, resort)
         webscraper.scrape_trail_report()
+        webscraper.scrape_snow_report()
         session.commit()
 
     browser.close()

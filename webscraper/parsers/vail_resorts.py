@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from webscraper import Parser, Rating
+from lib.util import get_inch_range_from_string
 
 
 class Vail(Parser):
@@ -17,6 +18,7 @@ class Vail(Parser):
 
     lift_css_selector = ".liftStatus__lifts__row"
     trail_css_selector = ".trailStatus__trails__row"
+    snow_report_css_selector = "div.snow_report__content"
 
     trail_type_to_rating: dict = {
         "beginner": Rating.GREEN.value,
@@ -78,3 +80,40 @@ class Vail(Parser):
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
+
+    def get_snow_report_metric(self, metric_element: WebElement) -> dict:
+        """
+        Vail allows various snow condition statistics to be parsed similarly.
+        """
+        metric_text = metric_element.find_element(
+            By.CLASS_NAME, "snow_report__metrics__measurement"
+        ).text
+        return get_inch_range_from_string(metric_text)
+
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        last_24_element = snow_report.find_element(
+            By.CSS_SELECTOR, "ul > li:nth-of-type(2)"
+        )
+        last_48_element = snow_report.find_element(
+            By.CSS_SELECTOR, "ul > li:nth-of-type(3)"
+        )
+        last_7_days_element = snow_report.find_element(
+            By.CSS_SELECTOR, "ul > li:nth-of-type(4)"
+        )
+        return {
+            24: self.get_snow_report_metric(last_24_element),
+            48: self.get_snow_report_metric(last_48_element),
+            (24 * 7): self.get_snow_report_metric(last_7_days_element),
+        }
+
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        base_layer_element = snow_report.find_element(
+            By.CSS_SELECTOR, "ul > li:nth-of-type(5)"
+        )
+        return self.get_snow_report_metric(base_layer_element)
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow_element = snow_report.find_element(
+            By.CSS_SELECTOR, "ul > li:nth-of-type(6)"
+        )
+        return self.get_snow_report_metric(season_snow_element)

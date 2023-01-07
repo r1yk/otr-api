@@ -1,11 +1,13 @@
 """
 Bromley webscraper
 """
+import re
 
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
 from webscraper import Parser, Rating
+from lib.util import get_inch_range_from_string
 
 
 class Bromley(Parser):
@@ -15,7 +17,7 @@ class Bromley(Parser):
 
     lift_css_selector = "div#lifts > div.lift-status-section > div.lift-status-info"
     trail_css_selector = "div#trails > div.lift-status-section > div.lift-status-info"
-
+    snow_report_css_selector = "div.report-container"
     trail_type_to_rating: dict = {
         "Easiest": Rating.GREEN.value,
         "More Difficult": Rating.BLUE.value,
@@ -72,3 +74,28 @@ class Bromley(Parser):
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
+
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        base_depth_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div > div.col-12:nth-child(4)"
+        )
+        base_depth = base_depth_element.find_element(By.TAG_NAME, "h1").text
+        return get_inch_range_from_string(base_depth)
+
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        parenthentical_regex = re.compile(r"\(.+\)")
+        last_24_hours = (
+            snow_report.find_element(By.CSS_SELECTOR, "div > div.col-12:nth-child(5)")
+            .find_element(By.TAG_NAME, "h1")
+            .text
+        )
+        cleaned = parenthentical_regex.sub("", last_24_hours)
+        return {24: get_inch_range_from_string(cleaned)}
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow = snow_report.find_element(
+            By.CSS_SELECTOR, "div > div.col-12:nth-child(6)"
+        )
+        return get_inch_range_from_string(
+            season_snow.find_element(By.TAG_NAME, "h1").text
+        )

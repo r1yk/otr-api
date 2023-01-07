@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from webscraper import Parser, Rating
+from lib.util import get_inch_range_from_string
 
 
 class SnowReportCSS(Parser):
@@ -60,6 +61,8 @@ class BoltonValley(SnowReportCSS):
     Parser for the Bolton Valley trail report
     """
 
+    snow_report_css_selector = "div#snowreport-395-conditions"
+
     trail_type_to_rating: dict = {
         "EASIER": Rating.GREEN.value,
         "MODERATE": Rating.BLUE.value,
@@ -68,11 +71,44 @@ class BoltonValley(SnowReportCSS):
         "TERRAIN PARK": Rating.TERRAIN_PARK.value,
     }
 
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        base_depth_range = snow_report.find_elements(
+            By.CSS_SELECTOR, "div.SnowConditions > dl > dd"
+        )[0].text
+        return get_inch_range_from_string(base_depth_range)
+
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        recent_snow_elements = snow_report.find_elements(
+            By.CSS_SELECTOR, "section.snowfall > div > dl"
+        )[0:2]
+        (last_24_hours, last_7_days) = (
+            recent_snow_elements[0],
+            recent_snow_elements[1],
+        )
+        return {
+            24: get_inch_range_from_string(
+                last_24_hours.find_element(By.TAG_NAME, "dd").text
+            ),
+            (24 * 7): get_inch_range_from_string(
+                last_7_days.find_element(By.TAG_NAME, "dd").text
+            ),
+        }
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow_element = snow_report.find_elements(
+            By.CSS_SELECTOR, "section.snowfall > div > dl"
+        )[-1]
+        return get_inch_range_from_string(
+            season_snow_element.find_element(By.TAG_NAME, "dd").text
+        )
+
 
 class JayPeak(SnowReportCSS):
     """
     Parser for the Jay Peak trail report
     """
+
+    snow_report_css_selector = "div#snow-cond"
 
     trail_type_to_rating: dict = {
         "BEGINNER": Rating.GREEN.value,
@@ -83,54 +119,43 @@ class JayPeak(SnowReportCSS):
         "ADVANCED GLADE": Rating.DOUBLE_GLADES.value,
     }
 
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        conditions_container = snow_report.find_elements(
+            By.CSS_SELECTOR,
+            "section.SnowReport-first",
+        )[1]
+        base_depth_range = conditions_container.find_elements(
+            By.CSS_SELECTOR, "div.SnowReport-measures--columns > dl > dd"
+        )[0].text
+        return get_inch_range_from_string(base_depth_range)
 
-class BurkeMountain(Parser):
-    """
-    Parser for the Burke Mountain trail report
-    """
-
-    lift_css_selector = "div#lifts > table > tbody > tr"
-    trail_css_selector = "div#trails > table > tbody >tr"
-
-    trail_type_to_rating: dict = {
-        "level-1": Rating.GREEN.value,
-        "level-2": Rating.BLUE.value,
-        "level-3": Rating.BLACK.value,
-        "level-4": Rating.DOUBLE_BLACK.value,
-    }
-
-    def get_lift_name(self, lift: WebElement) -> str:
-        return lift.find_element(By.CSS_SELECTOR, 'td[data-label="Lift Name"]').text
-
-    def get_lift_status(self, lift: WebElement) -> str:
-        status: WebElement = lift.find_element(
-            By.CSS_SELECTOR, 'td[data-label="Status"] > span'
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        recent_snow_elements = snow_report.find_elements(
+            By.CSS_SELECTOR,
+            "section.SnowReport-section--measurements > div.SnowReport-snowfall > dl",
+        )[0:3]
+        (last_24_hours, last_48_hours, last_7_days) = (
+            recent_snow_elements[0],
+            recent_snow_elements[1],
+            recent_snow_elements[2],
         )
-        return status.text
+        return {
+            24: get_inch_range_from_string(
+                last_24_hours.find_element(By.TAG_NAME, "dd").text
+            ),
+            48: get_inch_range_from_string(
+                last_48_hours.find_element(By.TAG_NAME, "dd").text
+            ),
+            (24 * 7): get_inch_range_from_string(
+                last_7_days.find_element(By.TAG_NAME, "dd").text
+            ),
+        }
 
-    def get_trail_name(self, trail: WebElement) -> str:
-        return trail.find_element(
-            By.CSS_SELECTOR, 'td[data-label="Trail Name"] > div.label'
-        ).text
-
-    def get_trail_type(self, trail: WebElement) -> str:
-        type_element: WebElement = trail.find_element(
-            By.CSS_SELECTOR, 'td[data-label="Trail Name"] > div.label > span'
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow_element = snow_report.find_elements(
+            By.CSS_SELECTOR,
+            "section.SnowReport-section--measurements > div.SnowReport-snowfall > dl",
+        )[-1]
+        return get_inch_range_from_string(
+            season_snow_element.find_element(By.TAG_NAME, "dd").text
         )
-        return type_element.get_attribute("class")
-
-    def get_trail_status(self, trail: WebElement) -> str:
-        return trail.find_element(
-            By.CSS_SELECTOR, 'td[data-label="Status"] > span'
-        ).get_attribute("class")
-
-    def get_trail_groomed(self, trail: WebElement) -> bool:
-        return (
-            trail.find_element(
-                By.CSS_SELECTOR, 'td[data-label="Groomed"] > span'
-            ).get_attribute("class")
-            == "open"
-        )
-
-    def get_trail_night_skiing(self, trail: WebElement) -> bool:
-        return False

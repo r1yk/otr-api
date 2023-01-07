@@ -6,6 +6,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 
 from webscraper import Parser, Rating
+from lib.util import get_inch_range_from_string
 
 
 class BurkeMountain(Parser):
@@ -15,6 +16,7 @@ class BurkeMountain(Parser):
 
     lift_css_selector = "div#lifts > table > tbody > tr"
     trail_css_selector = "div#trails > table > tbody > tr"
+    snow_report_css_selector = "div#snow"
 
     trail_type_to_rating: dict = {
         "level-1": Rating.GREEN.value,
@@ -58,3 +60,42 @@ class BurkeMountain(Parser):
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
+
+    def get_snow_report_metric(self, metric_element: WebElement) -> dict:
+        """
+        Burke allows various snow condition statistics to be parsed similarly.
+        """
+        return get_inch_range_from_string(
+            metric_element.find_element(By.CSS_SELECTOR, "div.value").text
+        )
+
+    def get_recent_snow(self, snow_report: WebElement) -> dict:
+        """Return key-value pairs that describe everything that can be gleaned
+        about recent snow accumulation in the report."""
+        last_24_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div.tallys > div.grid:nth-of-type(1)"
+        )
+        last_48_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div.tallys > div.grid:nth-of-type(2)"
+        )
+        last_7_days_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div.tallys > div.grid:nth-of-type(3)"
+        )
+
+        return {
+            24: self.get_snow_report_metric(last_24_element),
+            48: self.get_snow_report_metric(last_48_element),
+            (24 * 7): self.get_snow_report_metric(last_7_days_element),
+        }
+
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        base_layer_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div.tallys > div.grid:nth-of-type(4)"
+        )
+        return self.get_snow_report_metric(base_layer_element)
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div.tallys > div.grid:nth-of-type(5)"
+        )
+        return self.get_snow_report_metric(season_snow_element)

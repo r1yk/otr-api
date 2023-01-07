@@ -1,8 +1,12 @@
 """
 Utilities imported by whatever else
 """
-from typing import List
+import re
+from typing import List, Union
+from types import NoneType
 from sqlalchemy import inspect
+
+not_a_digit_regex = re.compile(r"\D+")
 
 
 def get_key_value_pairs(
@@ -51,3 +55,26 @@ def get_changes(model) -> dict:
         changes[attr.key] = (old_value, new_value)
 
     return changes
+
+
+def get_inch_range_from_string(
+    range_string: str, separator: str = "-"
+) -> Union[dict, NoneType]:
+    """
+    With a string describing a depth of snow in inches, possibly in a format like '6 - 12"',
+    and possibly with dubious whitespace, return a a dict describing the range as
+    hierarchical data.
+    """
+    components = [
+        not_a_digit_regex.sub("", component)
+        for component in range_string.split(separator)
+    ]
+    if len(components) == 2:
+        return {
+            "inchesLower": int(components[0]),
+            "inchesUpper": int(components[1]),
+        }
+    if len(components) == 1:
+        return {"inches": int(components[0])}
+
+    return None
