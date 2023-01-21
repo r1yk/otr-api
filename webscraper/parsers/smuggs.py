@@ -9,12 +9,15 @@ from selenium.webdriver.remote.webelement import WebElement
 from selenium.common.exceptions import NoSuchElementException
 
 from webscraper import Parser, Rating
+from lib.util import get_inch_range_from_string
 
 
 class Smuggs(Parser):
     """
     Parser for the Smugglers' Notch trail report.
     """
+
+    snow_report_css_selector = "div#summary-area"
 
     trail_type_to_rating: dict = {
         "easier": Rating.GREEN.value,
@@ -107,3 +110,15 @@ class Smuggs(Parser):
 
     def get_trail_night_skiing(self, trail: WebElement) -> bool:
         return False
+
+    def get_base_layer(self, snow_report: WebElement) -> dict:
+        base_layer_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div#base-summary > p:nth-of-type(2) > b"
+        )
+        return get_inch_range_from_string(base_layer_element.text)
+
+    def get_season_snow(self, snow_report: WebElement) -> dict:
+        season_snow_element = snow_report.find_element(
+            By.CSS_SELECTOR, "div#base-summary > p:nth-of-type(4) > b"
+        )
+        return get_inch_range_from_string(season_snow_element.text)

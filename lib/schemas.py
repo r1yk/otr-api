@@ -55,7 +55,7 @@ class Resort(BaseModel):
     total_trails: int
     trail_report_url: str
     updated_at: datetime
-    snow_report: dict
+    snow_report: Union[dict, None]
 
 
 class ResortWithUser(Resort):
