@@ -3,6 +3,7 @@
 Webscraper
 """
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from importlib import import_module
 import sys
@@ -205,12 +206,17 @@ def scrape_resorts(query: Optional[Query] = None) -> None:
         )
     )
 
-    browser = get_browser()
     with get_session() as session:
-        resorts: List[Resort] = session.execute(resort_query).scalars()
-        for resort in resorts:
+
+        def _scrape_trail_report(resort):
+            browser = get_browser()
             webscraper = Webscraper(browser, resort)
             webscraper.scrape_trail_report()
+            webscraper.scrape_snow_report()
+            browser.close()
             session.commit()
 
-    browser.close()
+        resorts: List[Resort] = session.execute(resort_query).scalars()
+        with ThreadPoolExecutor(max_workers=1) as scrape_executor:
+            for resort in resorts:
+                scrape_executor.submit(_scrape_trail_report, resort)

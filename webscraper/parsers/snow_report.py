@@ -61,7 +61,7 @@ class BoltonValley(SnowReportCSS):
     Parser for the Bolton Valley trail report
     """
 
-    snow_report_css_selector = "div#snowreport-395-conditions"
+    snow_report_css_selector = "div.SnowReport-Tab-pane:nth-of-type(3)"
 
     trail_type_to_rating: dict = {
         "EASIER": Rating.GREEN.value,
@@ -72,6 +72,7 @@ class BoltonValley(SnowReportCSS):
     }
 
     def get_base_layer(self, snow_report: WebElement) -> dict:
+        print(snow_report.get_attribute("id"))
         base_depth_range = snow_report.find_elements(
             By.CSS_SELECTOR, "div.SnowConditions > dl > dd"
         )[0].text

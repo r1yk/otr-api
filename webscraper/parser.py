@@ -99,7 +99,8 @@ class Parser:
                 night_skiing=self.get_trail_night_skiing(trail_element),
                 rating=self.get_trail_rating(trail_element),
             )
-            trail.is_open = trail.status.lower() == "open"
+            # trail.is_open = trail.status.lower() == "open"
+            trail.is_open = "open" in trail.status.lower()
             trails.append(trail)
         return trails
 
@@ -139,12 +140,14 @@ class Parser:
         Get the WebElement containing the snow report, and mine it for any data
         that can be found + returned as a dict.
         """
-        snow_report = self.get_snow_report_element()
-        return {
-            "baseLayer": self.get_base_layer(snow_report),
-            "recentSnow": self.get_recent_snow(snow_report),
-            "seasonSnow": self.get_season_snow(snow_report),
-        }
+        if self.snow_report_css_selector is not None:
+            snow_report = self.get_snow_report_element()
+            return {
+                "baseLayer": self.get_base_layer(snow_report),
+                "recentSnow": self.get_recent_snow(snow_report),
+                "seasonSnow": self.get_season_snow(snow_report),
+            }
+        return None
 
     def get_snow_report_element(self) -> WebElement:
         """Get the HTML element that contains all snow information."""

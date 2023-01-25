@@ -50,6 +50,7 @@ class Resort(BaseModel):
     name: str
     open_lifts: int
     open_trails: int
+    snow_report_url: Optional[str]
     state: str
     total_lifts: int
     total_trails: int

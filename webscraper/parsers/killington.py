@@ -130,7 +130,9 @@ class Killington(Parser):
         """
         print("METRIC", metric_element.find_element(By.CSS_SELECTOR, "h3.amount").text)
         return get_inch_range_from_string(
-            metric_element.find_element(By.CSS_SELECTOR, "h3.amount").text
+            metric_element.find_element(By.CSS_SELECTOR, "h3.amount").get_attribute(
+                "innerText"
+            )
         )
 
     def get_recent_snow(self, snow_report: WebElement) -> dict:
