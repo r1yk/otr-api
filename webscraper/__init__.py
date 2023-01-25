@@ -2,7 +2,7 @@
 """
 Webscraper
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from importlib import import_module
@@ -112,7 +112,7 @@ class Webscraper:
         """Trigger the end-to-end webscraping session."""
         print("\n", f"scraping {self.resort.name}...")
         try:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             self.browser.get(self.resort.trail_report_url)
             print("Loaded", self.resort.trail_report_url)
             if self.resort.additional_wait_seconds:
