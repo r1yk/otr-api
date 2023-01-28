@@ -168,22 +168,24 @@ class Webscraper:
             print_exception(exception)
 
 
-def get_browser(options: Optional[List[str]] = None) -> WebDriver:
+def get_browser(
+    options: Optional[List[str]] = None, headless: bool = False
+) -> WebDriver:
     """Return a running instance of (optionally headless) Google Chrome."""
     chrome_options = Options()
     if options:
         for option in options:
             chrome_options.add_argument(option)
 
-    if dotenv_values().get("MODE") == "headless":
+    if headless:
         chrome_options.add_argument("--headless")
 
     return Chrome(options=chrome_options)
 
 
-def scrape_resort(resort_id: str) -> None:
+def scrape_resort(resort_id: str, headless: bool = False) -> None:
     """Carry out a webscrape for a single resort."""
-    browser = get_browser()
+    browser = get_browser(headless=headless)
     with get_session() as session:
         resort = session.get(Resort, resort_id)
         webscraper = Webscraper(browser, resort)
@@ -194,7 +196,7 @@ def scrape_resort(resort_id: str) -> None:
     browser.close()
 
 
-def scrape_resorts(query: Optional[Query] = None) -> None:
+def scrape_resorts(query: Optional[Query] = None, headless: bool = False) -> None:
     """
     Carry out a webscrape for all resorts, or all resorts
     matching an optionally provided `Query`.
@@ -202,14 +204,14 @@ def scrape_resorts(query: Optional[Query] = None) -> None:
     resort_query = query or select(Resort).where(
         or_(
             Resort.updated_at == None,  # pylint: disable=singleton-comparison
-            Resort.updated_at < datetime.utcnow() - timedelta(minutes=10),
+            Resort.updated_at < datetime.now(timezone.utc) - timedelta(minutes=10),
         )
     )
 
     with get_session() as session:
 
         def _scrape_trail_report(resort):
-            browser = get_browser()
+            browser = get_browser(headless=headless)
             webscraper = Webscraper(browser, resort)
             webscraper.scrape_trail_report()
             webscraper.scrape_snow_report()

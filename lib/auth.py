@@ -56,7 +56,6 @@ class JWT:
                 if datetime.fromtimestamp(expiration, tz=timezone.utc) < datetime.now(
                     tz=timezone.utc
                 ):
-                    print("token expired")
                     raise HTTPException(status.HTTP_401_UNAUTHORIZED)
 
                 return payload_decoded

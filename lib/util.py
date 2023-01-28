@@ -65,7 +65,6 @@ def get_inch_range_from_string(
     and possibly with dubious whitespace, return a a dict describing the range as
     hierarchical data.
     """
-    print("RANGE", range_string)
     components = [
         not_a_digit_regex.sub("", component)
         for component in range_string.split(separator)
